@@ -1,0 +1,29 @@
+# ==========================================
+# 1. State Files (CRITICAL: Contains Secrets)
+# ==========================================
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# ==========================================
+# 2. Local Variable Values (Contains Passwords/Keys)
+# ==========================================
+# Ignore all actual value files except the example template
+*.tfvars
+*.tfvars.json
+!example.tfvars
+!*.example.tfvars
+
+# ==========================================
+# 3. Local Cache Directories (Heavy Download Clutter)
+# ==========================================
+.terraform/
+
+# ==========================================
+# 4. Developer Tools & OS Fluff
+# ==========================================
+.terraform.lock.hcl
+.tfplan
+plan.out
+.DS_Store
