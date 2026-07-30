@@ -20,21 +20,39 @@ data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
 
+module "kms_key" {
+  source      = "cloudposse/kms-key/aws"
+  namespace   = "agroshare"
+  stage       = var.environment
+  name        = "gateway_service"
+  description = "KMS key for gateway service"
+}
+
 # **********************************
 #          CUSTOM EMAIL SENDING LAMBDA *
 # **********************************
 module "custom_email_lambda" {
-  source                  = "terraform-aws-modules/lambda/aws"
-  function_name           = "custom_email_lambda"
-  handler                 = "index.handler"
-  runtime                 = "nodejs22.x"
+  source        = "terraform-aws-modules/lambda/aws"
+  function_name = "custom_email_lambda"
+  handler       = "index.handler"
+  runtime       = "nodejs22.x"
+  environment_variables = {
+    AWS_ACCESS_KEY_ID     = var.aws_access_key_id
+    AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
+    AWS_SES_ENDPOINT      = var.environment == "dev" ? "http://localhost:4566" : null
+    AWS_REGION            = data.aws_region.current.name
+    RESEND_API_KEY        = var.resend_api_key
+    //FROM_EMAIL_ADDRESS    = var.from_email_address
+    //EMAIL_SENDING_ACCOUNT = var.email_sending_account
+    //DOMAIN                = var.domain
+  }
   create_package          = false
   local_existing_package  = "${path.module}/../.terraform_artifacts/lambda.zip"
   ignore_source_code_hash = true
   allowed_triggers = {
     Cognito = {
       principal  = "cognito-idp.amazonaws.com"
-      source_arn = "arn:aws:cognito-idp:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:userpool/*"
+      source_arn = "arn:aws:cognito-idp:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:userpool/*"
     }
   }
   attach_policy_statements = true
@@ -75,83 +93,61 @@ module "custom_email_lambda" {
 }
 
 
-module "kms_key" {
-  source      = "cloudposse/kms-key/aws"
-  namespace   = "agroshare"
-  stage       = var.environment
-  name        = "gateway_service"
-  description = "KMS key for gateway service"
-}
-
-
 module "cognito_config" {
-  source  = "SevenPico/cognito/aws"
-  version = "1.0.0"
+  source  = "clouddrove/cognito/aws"
+  version = "1.0.2"
 
-  environment = var.environment
-  #Enable Pools
-  enable_user_pool = true
-  //enable_identity_pool = true
-  user_pool_name = "agro-share-user-pool"
-  stage          = var.environment
-
-  # Custom email sender
-  lambda_config_custom_email_sender = {
-    lambda_arn     = module.custom_email_lambda.lambda_function_arn
-    lambda_version = "V1_0"
-  }
-
-  # KMS key for encrypting email
-  lambda_config_kms_key_id = module.kms_key.key_id
-
-
-  #Advanced Security 
-  //user_attribute_update_settings_require_verification_before_update = ["email"]
-
-  #Basic Configuration
-  auto_verified_attributes = ["email"]
+  label_order              = ["name", "environment"] //userpool naming convension name-environment
+  environment              = var.environment
+  name                     = "agroshare-userpool"
   username_attributes      = ["email"]
+  auto_verified_attributes = ["email"]
+  # Password Policy 
+  minimum_length    = 8
+  require_lowercase = true
+  require_uppercase = true
+  require_numbers   = true
+  require_symbols   = true
 
-  #Password Policy
-  password_policy_minimum_length    = 12
-  password_policy_require_lowercase = true
-  password_policy_require_uppercase = true
-  password_policy_require_numbers   = true
-  password_policy_require_symbols   = true
-
-  #User Pool Clients (SuperAdmin Client & Admin Client)
+  #User Pool Clients (SuperAdmin Client & Admin Client) 
   clients = [
     {
-      client_name            = "super_admin_client"
-      client_generate_secret = false
-      client_explicit_auth_flows = [
-        "ALLOW_USER_PASSWORD_AUTH",
-        "ALLOW_REFRESH_TOKEN_AUTH",
+      name                                 = "super_admin_client"
+      generate_secret                      = false
+      allowed_oauth_flows_user_pool_client = var.environment == "dev" ? false : true
+      refresh_token_validity               = 30
+      allowed_oauth_flows                  = ["code"]
+      allowed_oauth_scopes                 = ["email", "openid", "profile"]
+      supported_identity_providers         = ["COGNITO"]
+      prevent_user_existence_errors        = "ENABLED"
+      enable_token_revocation              = true
+      explicit_auth_flows = [
+        "ALLOW_USER_SRP_AUTH",
+        "ALLOW_REFRESH_TOKEN_AUTH"
       ]
-      # callback_urls = [
-      #   "${var.website_url}/admin/auth/callback"
-      # ]
-      logout_urls = [
-        "${var.website_url}/admin/auth/logout"
-      ]
+      callback_urls = ["https://localhost:3000"]
+      logout_urls   = ["https://localhost:3000"]
+
     },
     {
-      client_name            = "admin_client"
-      client_generate_secret = false
-      client_explicit_auth_flows = [
+      name                                 = "admin_client"
+      generate_secret                      = false
+      allowed_oauth_flows_user_pool_client = var.environment == "dev" ? false : true
+      allowed_oauth_flows                  = ["code"]
+      allowed_oauth_scopes                 = ["email", "openid", "profile"]
+      prevent_user_existence_errors        = "ENABLED"
+      enable_token_revocation              = true
+      explicit_auth_flows = [
         "ALLOW_CUSTOM_AUTH",
-        "ALLOW_REFRESH_TOKEN_AUTH",
+        "ALLOW_REFRESH_TOKEN_AUTH"
       ]
-      callback_urls = [
-        "${var.website_url}/auth/callback"
-      ]
-      logout_urls = [
-        "${var.website_url}/auth/logout"
-      ]
+      supported_identity_providers = ["COGNITO", "GOOGLE"]
+      client_id                    = var.google_oauth_client_id
+      client_secret                = var.google_oauth_client_secret
+
     }
   ]
-  # Custom Attributes
-  schemas = [
+  schema_attributes = [
     {
       name     = "role"
       type     = "String"
@@ -171,27 +167,32 @@ module "cognito_config" {
       required = true
     }
   ]
+  lambda_custom_message = module.custom_email_lambda.lambda_function_arn
 }
 
-# Google Identity Provider 
-resource "aws_cognito_identity_provider" "google" {
-  provider_details = {
-    "client_id"        = var.google_oauth_client_id,
-    "client_secret"    = var.google_oauth_client_secret,
-    "authorize_scopes" = "openid email profile https://www.googleapis.com/auth/youtube.readonly",
-  }
-  provider_name = "Google"
-  provider_type = "Google"
-  user_pool_id  = module.cognito_config.id
-
-  attribute_mapping = {
-    email       = "email"
-    given_name  = "given_name"
-    family_name = "family_name"
-    picture     = "picture"
-    username    = "sub"
-  }
+data "aws_cognito_user_pool_clients" "all_clients" {
+  user_pool_id = module.cognito_config.user_pool_id
 }
+
+# # Google Identity Provider 
+# resource "aws_cognito_identity_provider" "google" {
+#   provider_details = {
+#     "client_id"        = var.google_oauth_client_id,
+#     "client_secret"    = var.google_oauth_client_secret,
+#     "authorize_scopes" = "openid email profile https://www.googleapis.com/auth/youtube.readonly",
+#   }
+#   provider_name = "Google"
+#   provider_type = "Google"
+#   user_pool_id  = module.cognito_config.id
+
+#   attribute_mapping = {
+#     email       = "email"
+#     given_name  = "given_name"
+#     family_name = "family_name"
+#     picture     = "picture"
+#     username    = "sub"
+#   }
+# }
 
 # **********************************
 #          API GATEWAY             *
@@ -224,23 +225,22 @@ module "api_gateway" {
         "$request.header.Authorization"
       ]
       jwt_configuration = {
-        audience = [module.cognito_config.client_ids]
-        issuer   = module.cognito_config.endpoint,
+        audience = data.aws_cognito_user_pool_clients.all_clients.client_ids
+        issuer   = var.environment == "dev" ? "http://localhost:4566/${module.cognito_config.user_pool_id}" : "https://cognito-idp.${data.aws_region.current.region}.amazonaws.com/${module.cognito_config.user_pool_id}"
       }
     }
   }
-  routes = {
-    "$default" = {
-      authorizer_key = "cognito"
-      integration = {
-        //uri = module.payment_lambda.invoke_arn
-        uri                    = module.payment_lambda.lambda_function_invoke_arn
-        type                   = "AWS_PROXY"
-        payload_format_version = "2.0"
-      }
-    }
+  # routes = {
+  #   "$default" = {
+  #     authorizer_key = "cognito"
+  #     integration = {
+  #       // uri                    = module.payment_lambda.lambda_function_invoke_arn
+  #       type                   = "AWS_PROXY"
+  #       payload_format_version = "2.0"
+  #     }
+  #   }
 
-  }
+  # }
 
   tags = {
     terraform = "true"

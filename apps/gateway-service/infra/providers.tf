@@ -1,9 +1,10 @@
+
 provider "aws" {
   region                      = "us-east-1"
-  access_key                  = "test"
-  secret_key                  = "test"
-  skip_metadata_api_check     = true
-  skip_credentials_validation = true
+  access_key                  = var.aws_access_key_id
+  secret_key                  = var.aws_secret_access_key
+  skip_metadata_api_check     = var.environment == "dev" ? true : false
+  skip_credentials_validation = var.environment == "dev" ? true : false
 
 
   default_tags {

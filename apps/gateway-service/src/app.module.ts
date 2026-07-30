@@ -1,10 +1,14 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { AuthChallengeService } from './auth-challenge.service';
+import { CognitoCustomMessageService } from './custom-message.service';
+import { ResendModule } from 'nestjs-resend';
 
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    ResendModule.forRoot({
+      apiKey: process.env.RESEND_API_KEY!,
+    }),
+  ],
+  providers: [AuthChallengeService, CognitoCustomMessageService],
 })
 export class AppModule {}

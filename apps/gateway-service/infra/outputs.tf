@@ -4,6 +4,6 @@ output "local_api_url" {
 }
 
 output "nextjs_user_pool_client_id" {
-  value       = aws_cognito_user_pool_client.client.id
+  value       = data.aws_cognito_user_pool_clients.all_clients.client_ids[1]
   description = "Inject this into NEXT_PUBLIC_USER_POOL_CLIENT_ID"
 }
