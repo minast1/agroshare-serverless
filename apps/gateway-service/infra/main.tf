@@ -4,8 +4,7 @@ resource "terraform_data" "lambda_esbuild_compiler" {
   }
 
   provisioner "local-exec" {
-    command = "cd ${path.module}/../../.. &&pnpm turbo run build:lambda --filter @repo/gateway-service"
-    //working_dir = "${path.module}/.."
+    command = "cd ${path.module}/../../.. && pnpm turbo run build:lambda --filter gateway-service"
   }
 }
 
@@ -29,22 +28,19 @@ module "kms_key" {
 }
 
 # **********************************
-#          CUSTOM EMAIL SENDING LAMBDA *
+#          COGNITO AUTHENTICATION LAMBDA *
 # **********************************
-module "custom_email_lambda" {
+module "cognito_auth_lambda" {
   source        = "terraform-aws-modules/lambda/aws"
-  function_name = "custom_email_lambda"
+  function_name = "cognito_auth_lambda"
   handler       = "index.handler"
   runtime       = "nodejs22.x"
   environment_variables = {
     AWS_ACCESS_KEY_ID     = var.aws_access_key_id
     AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
     AWS_SES_ENDPOINT      = var.environment == "dev" ? "http://localhost:4566" : null
-    AWS_REGION            = data.aws_region.current.name
+    AWS_REGION            = data.aws_region.current.region
     RESEND_API_KEY        = var.resend_api_key
-    //FROM_EMAIL_ADDRESS    = var.from_email_address
-    //EMAIL_SENDING_ACCOUNT = var.email_sending_account
-    //DOMAIN                = var.domain
   }
   create_package          = false
   local_existing_package  = "${path.module}/../.terraform_artifacts/lambda.zip"
@@ -75,9 +71,16 @@ module "custom_email_lambda" {
       effect    = "Allow"
       actions   = ["kms:Decrypt", "kms:CreateGrant"]
       resources = ["*"]
+    },
+    "cognito_user_profile_update_policy" = {
+      effect = "Allow"
+      actions = [
+        "cognito-idp:AdminUpdateUserAttributes",
+      ]
+      resources = ["*"]
     }
   }
-  role_name = "custom_email_lambda_role"
+  role_name = "cognito_unified_auth_lambda_role"
   assume_role_policy_statements = {
     lambda_service = {
       effect  = "Allow"
@@ -142,32 +145,16 @@ module "cognito_config" {
         "ALLOW_REFRESH_TOKEN_AUTH"
       ]
       supported_identity_providers = ["COGNITO", "GOOGLE"]
-      client_id                    = var.google_oauth_client_id
-      client_secret                = var.google_oauth_client_secret
 
     }
   ]
-  schema_attributes = [
-    {
-      name     = "role"
-      type     = "String"
-      mutable  = true
-      required = true
-    },
-    {
-      name     = "tenant_id"
-      type     = "String"
-      mutable  = false
-      required = true
-    },
-    {
-      name     = "tenant_type"
-      type     = "String"
-      mutable  = false
-      required = true
-    }
-  ]
-  lambda_custom_message = module.custom_email_lambda.lambda_function_arn
+
+  lambda_custom_message                 = module.cognito_auth_lambda.lambda_function_arn
+  lambda_post_confirmation              = module.cognito_auth_lambda.lambda_function_arn
+  lambda_pre_token_generation           = module.cognito_auth_lambda.lambda_function_arn
+  lambda_create_auth_challenge          = module.cognito_auth_lambda.lambda_function_arn
+  lambda_define_auth_challenge          = module.cognito_auth_lambda.lambda_function_arn
+  lambda_verify_auth_challenge_response = module.cognito_auth_lambda.lambda_function_arn
 }
 
 data "aws_cognito_user_pool_clients" "all_clients" {
@@ -175,24 +162,24 @@ data "aws_cognito_user_pool_clients" "all_clients" {
 }
 
 # # Google Identity Provider 
-# resource "aws_cognito_identity_provider" "google" {
-#   provider_details = {
-#     "client_id"        = var.google_oauth_client_id,
-#     "client_secret"    = var.google_oauth_client_secret,
-#     "authorize_scopes" = "openid email profile https://www.googleapis.com/auth/youtube.readonly",
-#   }
-#   provider_name = "Google"
-#   provider_type = "Google"
-#   user_pool_id  = module.cognito_config.id
+resource "aws_cognito_identity_provider" "google" {
+  provider_details = {
+    "client_id"        = var.google_oauth_client_id,
+    "client_secret"    = var.google_oauth_client_secret,
+    "authorize_scopes" = "openid email profile https://wwwuth/youtube.readonly",
+  }
+  provider_name = "Google"
+  provider_type = "Google"
+  user_pool_id  = module.cognito_config.user_pool_id
 
-#   attribute_mapping = {
-#     email       = "email"
-#     given_name  = "given_name"
-#     family_name = "family_name"
-#     picture     = "picture"
-#     username    = "sub"
-#   }
-# }
+  attribute_mapping = {
+    email       = "email"
+    given_name  = "given_name"
+    family_name = "family_name"
+    picture     = "picture"
+    username    = "sub"
+  }
+}
 
 # **********************************
 #          API GATEWAY             *
@@ -247,19 +234,6 @@ module "api_gateway" {
 
   }
 }
-//Write geteway_id, gateway_arn and authroizer_id to aws ssm parameter store
-
-# module "ssm_iam_role" {
-#   source           = "git::https://github.com/cloudposse/terraform-aws-ssm-iam-role.git?ref=master"
-#   namespace        = "agroshare"
-#   stage            = var.environment
-#   name             = "api_gateway"
-#   attributes       = ["all"]
-#   account_id       = data.aws_caller_identity.current.account_id
-#   kms_key_arn      = aws_kms_key.cognito.arn
-#   ssm_parameters   = ["*"]
-#   ssm_actions      = ["ssm:GetParametersByPath", "ssm:GetParameters"]
-# }
 
 module "ssm-parameter-store" {
   source  = "cloudposse/ssm-parameter-store/aws"

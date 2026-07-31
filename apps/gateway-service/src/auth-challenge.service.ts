@@ -37,17 +37,23 @@ export class AuthChallengeService {
 
   async handleCreateAuth(event: CreateAuthChallengeTriggerEvent) {
     if (event.request.challengeName === 'CUSTOM_CHALLENGE') {
-      // Generate a secure, pseudo-random 6-digit OTP code string
-      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-      // Save this OTP inside Cognito's metadata so the "Verify" Lambda can check it later
-      event.response.privateChallengeParameters = { secretOTP: otpCode };
+      try {
+        // Generate a secure, pseudo-random 6-digit OTP code string
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        // Save this OTP inside Cognito's metadata so the "Verify" Lambda can check it later
+        event.response.privateChallengeParameters = { secretOTP: otpCode };
 
-      // 3. Inject it into the public parameter payload so your custom message template can read it
-      event.response.publicChallengeParameters = {
-        email: event.request.userAttributes.email,
-      };
-      await this.sendOTPEmail(event.request.userAttributes.email, otpCode);
-      return event;
+        // 3. Inject it into the public parameter payload so your custom message template can read it
+        event.response.publicChallengeParameters = {
+          email: event.request.userAttributes.email,
+        };
+        await this.sendOTPEmail(event.request.userAttributes.email, otpCode);
+        return event;
+      } catch (error) {
+        throw new Error(
+          (error as Error).message || 'Error Creating auth challenge',
+        );
+      }
     }
     return event;
   }
@@ -67,8 +73,9 @@ export class AuthChallengeService {
         subject: 'Your OTP Code',
         html: `<p>Your 6-digit access code is: <strong>${otpCode}</strong></p>`,
       });
-    } catch (error) {
-      this.logger.error(error);
+    } catch (error: unknown) {
+      this.logger.error((error as Error).message || 'Error sending OTP email');
+      throw new Error((error as Error).message || 'Error sending OTP email');
     }
   }
 }

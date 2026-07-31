@@ -5,14 +5,16 @@ import {
   CreateAuthChallengeTriggerEvent,
   CustomMessageTriggerEvent,
   DefineAuthChallengeTriggerEvent,
-  PostAuthenticationTriggerEvent,
+  PostConfirmationTriggerEvent,
+  PreSignUpTriggerEvent,
   PreTokenGenerationTriggerEvent,
   VerifyAuthChallengeResponseTriggerEvent,
 } from 'aws-lambda';
 import { INestApplicationContext } from '@nestjs/common';
 import { AuthChallengeService } from './auth-challenge.service';
 import { PreTokenGenerationService } from './pre-token.service';
-import { PostAuthService } from './post-auth.service';
+import { PostConfirmationService } from './post-confirmation.service';
+import { PreSignUpService } from './pre-signup.service';
 
 type CognitoTriggerEvent =
   | CustomMessageTriggerEvent
@@ -20,7 +22,8 @@ type CognitoTriggerEvent =
   | CreateAuthChallengeTriggerEvent
   | VerifyAuthChallengeResponseTriggerEvent
   | PreTokenGenerationTriggerEvent
-  | PostAuthenticationTriggerEvent;
+  | PostConfirmationTriggerEvent
+  | PreSignUpTriggerEvent;
 let cachedAppContext: INestApplicationContext;
 
 async function bootstrapContext(): Promise<INestApplicationContext> {
@@ -62,9 +65,16 @@ export const handler = async (
     );
   }
 
-  if (trigger.startsWith('PostAuthentication_')) {
-    const service = appContext.get(PostAuthService);
-    return service.handlePostAuth(event as PostAuthenticationTriggerEvent);
+  if (trigger.startsWith('PostConfirmation_')) {
+    const service = appContext.get(PostConfirmationService);
+    return service.handlePostConfirmation(
+      event as PostConfirmationTriggerEvent,
+    );
+  }
+
+  if (trigger.startsWith('PreSignUp_')) {
+    const service = appContext.get(PreSignUpService);
+    return service.handlePreSignUp(event as PreSignUpTriggerEvent);
   }
 
   return event;

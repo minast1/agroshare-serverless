@@ -3,28 +3,25 @@ import {
   CognitoIdentityProviderClient,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { Injectable, Logger } from '@nestjs/common';
-import { PostAuthenticationTriggerEvent } from 'aws-lambda';
+import { PostConfirmationTriggerEvent } from 'aws-lambda';
 
 const cognitoClient = new CognitoIdentityProviderClient({});
 @Injectable()
-export class PostAuthService {
-  private readonly logger = new Logger(PostAuthService.name);
+export class PostConfirmationService {
+  private readonly logger = new Logger(PostConfirmationService.name);
 
-  async handlePostAuth(event: PostAuthenticationTriggerEvent) {
-    this.logger.log('PostAuthentication Trigger: ', event);
-    const currentAttributes = event.request.userAttributes || {};
-    const currentTenantId = currentAttributes['custom:tenant_id'];
-    const currentTenantType = currentAttributes['custom:tenant_type'];
-    const currentRole = currentAttributes['custom:role'];
+  async handlePostConfirmation(event: PostConfirmationTriggerEvent) {
+    this.logger.log('PostConfirmation Trigger: ', event);
+
     const poolId = event.userPoolId;
     const username = event.userName;
-    let incomingTenantId = null;
-    let incomingTenantType = null;
-    let incomingRole = null;
+    let tenantId = null;
+    let tenantType = null;
+    let role = null;
 
     //Admins Google Social Login
     if (
-      event.triggerSource === 'PostAuthentication_Authentication' &&
+      event.triggerSource === 'PostConfirmation_ConfirmSignUp' &&
       event.request.clientMetadata?.customState //this would be coming from amplify when using google auth
     ) {
       try {
@@ -32,9 +29,9 @@ export class PostAuthService {
         const state = JSON.parse(
           event.request.clientMetadata.customState,
         ) as Record<string, string>;
-        incomingTenantId = state.tenant_id;
-        incomingTenantType = state.tenant_type;
-        incomingRole = state.role ?? 'admin';
+        tenantId = state.tenant_id;
+        tenantType = state.tenant_type;
+        role = state.role ?? 'admin';
       } catch (error) {
         this.logger.error('Error parsing customState:', error);
       }
@@ -42,14 +39,14 @@ export class PostAuthService {
 
     // Email OTP /CUSTOM AUTH FLOW (For Both Admins)
     else if (
-      event.triggerSource === 'PostAuthentication_Authentication' &&
+      event.triggerSource === 'PostConfirmation_ConfirmSignUp' &&
       event.request.clientMetadata?.tenantId
     ) {
       console.log('Processing Email OTP / Custom Auth login...');
 
-      incomingTenantId = event.request.clientMetadata.tenantId;
-      incomingTenantType = event.request.clientMetadata.tenantType;
-      incomingRole = event.request.clientMetadata.role ?? 'admin';
+      tenantId = event.request.clientMetadata.tenantId;
+      tenantType = event.request.clientMetadata.tenantType;
+      role = event.request.clientMetadata.role ?? 'admin';
     }
     //Email & Password (Super-Admin)
     else {
@@ -60,18 +57,10 @@ export class PostAuthService {
       return event;
     }
     // Write Metadata back to Cognito Profile Database
-    if (incomingTenantId && incomingTenantType && incomingRole) {
-      if (
-        currentTenantId === incomingTenantId &&
-        currentTenantType === incomingTenantType &&
-        currentRole === incomingRole
-      ) {
-        console.log('No changes detected in profile data.');
-        return event;
-      }
+    if (tenantId && tenantType && role) {
       try {
         console.log(
-          `Saving to profile database -> Tenant: ${incomingTenantId}, Role: ${incomingRole}`,
+          `Saving to profile database -> Tenant: ${tenantId}, Role: ${role}`,
         );
         const command = new AdminUpdateUserAttributesCommand({
           UserPoolId: poolId,
@@ -79,22 +68,25 @@ export class PostAuthService {
           UserAttributes: [
             {
               Name: 'custom:tenant_id',
-              Value: incomingTenantId,
+              Value: tenantId,
             },
             {
               Name: 'custom:tenant_type',
-              Value: incomingTenantType,
+              Value: tenantType,
             },
             {
               Name: 'custom:role',
-              Value: incomingRole,
+              Value: role,
             },
           ],
         });
         await cognitoClient.send(command);
         this.logger.log('Profile data saved successfully.');
-      } catch (error) {
+      } catch (error: unknown) {
         this.logger.error('Error saving profile data to Cognito:', error);
+        throw new Error(
+          (error as Error).message || 'Error saving profile data to Cognito',
+        );
       }
     }
     return event;

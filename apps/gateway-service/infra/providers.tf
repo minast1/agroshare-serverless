@@ -37,8 +37,9 @@ provider "aws" {
       ssm            = "http://localhost:4566"
       kms            = "http://localhost:4566"
       // rds            = "http://localhost:4566"
-      sts          = "http://localhost:4566"
-      apigatewayv2 = "http://localhost:4566"
+      sts             = "http://localhost:4566"
+      cognitoidentity = "http://localhost:4566"
+      apigatewayv2    = "http://localhost:4566"
     }
   }
 }
