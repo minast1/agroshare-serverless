@@ -21,6 +21,12 @@ coverage
 # Vercel
 .vercel
 
+# Terraform build artifacts
+.terraform/
+.terraform_artifacts/
+*.tfstate
+*.tfstate.*
+
 # Build Outputs
 .next/
 out/
