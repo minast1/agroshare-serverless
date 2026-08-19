@@ -7,7 +7,7 @@ import {
   DefineAuthChallengeTriggerEvent,
   PostConfirmationTriggerEvent,
   PreSignUpTriggerEvent,
-  PreTokenGenerationTriggerEvent,
+  PreTokenGenerationAuthenticationV2TriggerEvent,
   VerifyAuthChallengeResponseTriggerEvent,
 } from 'aws-lambda';
 import { INestApplicationContext } from '@nestjs/common';
@@ -21,7 +21,7 @@ type CognitoTriggerEvent =
   | DefineAuthChallengeTriggerEvent
   | CreateAuthChallengeTriggerEvent
   | VerifyAuthChallengeResponseTriggerEvent
-  | PreTokenGenerationTriggerEvent
+  | PreTokenGenerationAuthenticationV2TriggerEvent
   | PostConfirmationTriggerEvent
   | PreSignUpTriggerEvent;
 let cachedAppContext: INestApplicationContext;
@@ -51,17 +51,17 @@ export const handler = async (
 
   if (trigger === 'CreateAuthChallenge_Authentication') {
     const service = appContext.get(AuthChallengeService);
-    return service.handleCreateAuth(event);
+    return await service.handleCreateAuth(event);
   }
 
   if (trigger === 'VerifyAuthChallengeResponse_Authentication') {
     const service = appContext.get(AuthChallengeService);
     return service.handleVerifyAuthChallenge(event);
   }
-  if (trigger.startsWith('PreTokenGeneration_')) {
+  if (trigger.startsWith('TokenGeneration_')) {
     const service = appContext.get(PreTokenGenerationService);
     return service.handlePreTokenGeneration(
-      event as PreTokenGenerationTriggerEvent,
+      event as PreTokenGenerationAuthenticationV2TriggerEvent,
     );
   }
 

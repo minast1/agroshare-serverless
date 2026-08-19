@@ -53,3 +53,14 @@ variable "resend_api_key" {
   sensitive = true
 }
 
+variable "super_admin_email" {
+  type        = string
+  description = "The email address of the super admin"
+}
+
+variable "super_admin_password" {
+  type        = string
+  description = "The password of the super admin"
+}
+
+

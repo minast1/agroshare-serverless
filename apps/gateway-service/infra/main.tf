@@ -96,69 +96,111 @@ module "cognito_auth_lambda" {
 }
 
 
-module "cognito_config" {
-  source  = "clouddrove/cognito/aws"
-  version = "1.0.2"
-
-  label_order              = ["name", "environment"] //userpool naming convension name-environment
-  environment              = var.environment
+resource "aws_cognito_user_pool" "main" {
   name                     = "agroshare-userpool"
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
+  #user_pool_tier           = "PLUS"
   # Password Policy 
-  minimum_length    = 8
-  require_lowercase = true
-  require_uppercase = true
-  require_numbers   = true
-  require_symbols   = true
+  password_policy {
+    minimum_length    = 8
+    require_lowercase = true
+    require_uppercase = true
+    require_numbers   = true
+    require_symbols   = true
+  }
 
-  #User Pool Clients (SuperAdmin Client & Admin Client) 
-  clients = [
-    {
-      name                                 = "super_admin_client"
-      generate_secret                      = false
-      allowed_oauth_flows_user_pool_client = var.environment == "dev" ? false : true
-      refresh_token_validity               = 30
-      allowed_oauth_flows                  = ["code"]
-      allowed_oauth_scopes                 = ["email", "openid", "profile"]
-      supported_identity_providers         = ["COGNITO"]
-      prevent_user_existence_errors        = "ENABLED"
-      enable_token_revocation              = true
-      explicit_auth_flows = [
-        "ALLOW_USER_SRP_AUTH",
-        "ALLOW_REFRESH_TOKEN_AUTH"
-      ]
-      callback_urls = ["https://localhost:3000"]
-      logout_urls   = ["https://localhost:3000"]
 
-    },
-    {
-      name                                 = "admin_client"
-      generate_secret                      = false
-      allowed_oauth_flows_user_pool_client = var.environment == "dev" ? false : true
-      allowed_oauth_flows                  = ["code"]
-      allowed_oauth_scopes                 = ["email", "openid", "profile"]
-      prevent_user_existence_errors        = "ENABLED"
-      enable_token_revocation              = true
-      explicit_auth_flows = [
-        "ALLOW_CUSTOM_AUTH",
-        "ALLOW_REFRESH_TOKEN_AUTH"
-      ]
-      supported_identity_providers = ["COGNITO", "GOOGLE"]
-
+  #Account recovery
+  account_recovery_setting {
+    recovery_mechanism {
+      name     = "verified_email"
+      priority = 1
     }
-  ]
+  }
+  schema {
+    name                = "tenant_id"
+    attribute_data_type = "String"
+    mutable             = true
+    required            = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 256
+    }
+  }
+  schema {
+    name                = "role"
+    attribute_data_type = "String"
+    mutable             = true
+    required            = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 30
+    }
+  }
+  schema {
+    name                = "tenant_type"
+    attribute_data_type = "String"
+    mutable             = true
+    required            = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 50
+    }
+  }
+  #Email Configuration
+  email_configuration {
+    email_sending_account = "COGNITO_DEFAULT"
+  }
 
-  lambda_custom_message                 = module.cognito_auth_lambda.lambda_function_arn
-  lambda_post_confirmation              = module.cognito_auth_lambda.lambda_function_arn
-  lambda_pre_token_generation           = module.cognito_auth_lambda.lambda_function_arn
-  lambda_create_auth_challenge          = module.cognito_auth_lambda.lambda_function_arn
-  lambda_define_auth_challenge          = module.cognito_auth_lambda.lambda_function_arn
-  lambda_verify_auth_challenge_response = module.cognito_auth_lambda.lambda_function_arn
+  #Lambda Configurations 
+  lambda_config {
+    custom_message       = module.cognito_auth_lambda.lambda_function_arn
+    post_confirmation    = module.cognito_auth_lambda.lambda_function_arn
+    pre_token_generation = module.cognito_auth_lambda.lambda_function_arn
+    pre_token_generation_config {
+      lambda_arn     = module.cognito_auth_lambda.lambda_function_arn
+      lambda_version = "V2_0"
+    }
+    user_migration                 = module.cognito_auth_lambda.lambda_function_arn
+    pre_sign_up                    = module.cognito_auth_lambda.lambda_function_arn
+    verify_auth_challenge_response = module.cognito_auth_lambda.lambda_function_arn
+    define_auth_challenge          = module.cognito_auth_lambda.lambda_function_arn
+    create_auth_challenge          = module.cognito_auth_lambda.lambda_function_arn
+    kms_key_id                     = module.kms_key.key_arn
+
+
+  }
+  user_pool_add_ons {
+    advanced_security_mode = "AUDIT"
+  }
+
 }
 
-data "aws_cognito_user_pool_clients" "all_clients" {
-  user_pool_id = module.cognito_config.user_pool_id
+# SuperAdmin Client
+resource "aws_cognito_user_pool_client" "super_admin" {
+  name                                 = "super_admin_client"
+  user_pool_id                         = aws_cognito_user_pool.main.id
+  explicit_auth_flows                  = ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
+  allowed_oauth_flows_user_pool_client = false
+  allowed_oauth_flows                  = ["code"]
+  generate_secret                      = false
+  #Token Validity 
+  access_token_validity  = 1
+  id_token_validity      = 1
+  refresh_token_validity = 30
+  token_validity_units {
+    access_token  = "hours"
+    id_token      = "hours"
+    refresh_token = "days"
+  }
+  prevent_user_existence_errors = "ENABLED"
+  allowed_oauth_scopes          = ["email", "openid"]
+  supported_identity_providers  = ["COGNITO"]
+  read_attributes               = ["email", "custom:tenant_id", "custom:role", "custom:tenant_type"]
+  write_attributes              = ["email", "custom:tenant_id", "custom:role", "custom:tenant_type"]
+  enable_token_revocation       = true
+
 }
 
 # # Google Identity Provider 
@@ -166,11 +208,11 @@ resource "aws_cognito_identity_provider" "google" {
   provider_details = {
     "client_id"        = var.google_oauth_client_id,
     "client_secret"    = var.google_oauth_client_secret,
-    "authorize_scopes" = "openid email profile https://wwwuth/youtube.readonly",
+    "authorize_scopes" = "openid email profile",
   }
   provider_name = "Google"
   provider_type = "Google"
-  user_pool_id  = module.cognito_config.user_pool_id
+  user_pool_id  = aws_cognito_user_pool.main.id
 
   attribute_mapping = {
     email       = "email"
@@ -180,6 +222,70 @@ resource "aws_cognito_identity_provider" "google" {
     username    = "sub"
   }
 }
+
+# Tenant Admin Client
+resource "aws_cognito_user_pool_client" "admin" {
+  name                                 = "tenant_admin_client"
+  user_pool_id                         = aws_cognito_user_pool.main.id
+  explicit_auth_flows                  = ["ALLOW_CUSTOM_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
+  allowed_oauth_flows_user_pool_client = true
+  allowed_oauth_flows                  = ["code", "implicit"]
+  allowed_oauth_scopes                 = ["email", "openid", "profile"]
+  callback_urls                        = ["https://localhost:3000"]
+  logout_urls                          = ["https://localhost:3000"]
+  generate_secret                      = false
+  #Token Validity 
+  access_token_validity  = 1
+  id_token_validity      = 1
+  refresh_token_validity = 30
+  token_validity_units {
+    access_token  = "hours"
+    id_token      = "hours"
+    refresh_token = "days"
+  }
+  prevent_user_existence_errors = "ENABLED"
+
+  supported_identity_providers = ["COGNITO", aws_cognito_identity_provider.google.provider_name]
+  read_attributes              = ["email", "custom:tenant_id", "custom:role", "custom:tenant_type"]
+  write_attributes             = ["email", "custom:tenant_id", "custom:role", "custom:tenant_type"]
+  enable_token_revocation      = true
+
+}
+
+data "aws_cognito_user_pool_clients" "all_clients" {
+  user_pool_id = aws_cognito_user_pool.main.id
+}
+
+locals {
+  target_users = {
+    "default_admin" = {
+      email    = var.super_admin_email
+      tenant   = "default_tenant"
+      type     = "vendor"
+      role     = "admin"
+      password = var.super_admin_password
+    }
+  }
+}
+
+resource "aws_cognito_user" "custom_users" {
+  for_each = local.target_users
+
+  user_pool_id = aws_cognito_user_pool.main.id
+  username     = each.value.email
+  attributes = {
+    "custom:tenant_id"   = each.value.tenant
+    "custom:role"        = each.value.role
+    "custom:tenant_type" = each.value.type
+    "email"              = each.value.email
+    "email_verified"     = "true"
+  }
+
+  depends_on = [
+    aws_cognito_user_pool.main
+  ]
+}
+
 
 # **********************************
 #          API GATEWAY             *
@@ -213,7 +319,7 @@ module "api_gateway" {
       ]
       jwt_configuration = {
         audience = data.aws_cognito_user_pool_clients.all_clients.client_ids
-        issuer   = var.environment == "dev" ? "http://localhost:4566/${module.cognito_config.user_pool_id}" : "https://cognito-idp.${data.aws_region.current.region}.amazonaws.com/${module.cognito_config.user_pool_id}"
+        issuer   = var.environment == "dev" ? "http://localhost:4566/${aws_cognito_user_pool.main.id}" : "https://cognito-idp.${data.aws_region.current.region}.amazonaws.com/${aws_cognito_user_pool.main.id}"
       }
     }
   }

@@ -1,8 +1,8 @@
 
 provider "aws" {
   region                      = "us-east-1"
-  access_key                  = var.aws_access_key_id
-  secret_key                  = var.aws_secret_access_key
+  access_key                  = var.environment == "dev" ? "test" : var.aws_access_key_id
+  secret_key                  = var.environment == "dev" ? "test" : var.aws_secret_access_key
   skip_metadata_api_check     = var.environment == "dev" ? true : false
   skip_credentials_validation = var.environment == "dev" ? true : false
 

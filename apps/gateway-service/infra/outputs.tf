@@ -3,7 +3,22 @@ output "local_api_url" {
   description = "The local HTTP API Gateway base URL on MiniStack"
 }
 
-output "nextjs_user_pool_client_id" {
-  value       = data.aws_cognito_user_pool_clients.all_clients
-  description = "Inject this into NEXT_PUBLIC_USER_POOL_CLIENT_ID"
+output "user_pool_id" {
+  value       = aws_cognito_user_pool.main.id
+  description = "Cognito User Pool ID"
+}
+
+output "user_pool_arn" {
+  value       = aws_cognito_user_pool.main.arn
+  description = "Cognito User Pool ARN"
+}
+
+output "tenant_admin_client_id" {
+  value       = aws_cognito_user_pool_client.admin.id
+  description = "Cognito Tenant Admin Client ID"
+}
+
+output "super_admin_client_id" {
+  value       = aws_cognito_user_pool_client.super_admin.id
+  description = "Cognito Super Admin Client ID"
 }
