@@ -5,6 +5,7 @@ provider "aws" {
   secret_key                  = var.environment == "dev" ? "test" : var.aws_secret_access_key
   skip_metadata_api_check     = var.environment == "dev" ? true : false
   skip_credentials_validation = var.environment == "dev" ? true : false
+  #skip_requesting_account_id  = var.environment == "dev" ? true : false
 
 
   default_tags {

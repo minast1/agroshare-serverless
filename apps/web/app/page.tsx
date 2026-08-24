@@ -1,349 +1,351 @@
 "use client"
-import Image, { type ImageProps } from "next/image";
-import styles from "./page.module.css";
-import { useEffect, useState } from "react";
-import { signIn, signUp, confirmSignUp, signInWithRedirect, fetchAuthSession, fetchUserAttributes, confirmSignIn } from 'aws-amplify/auth';
-import { Amplify } from "aws-amplify";
-import { Hub } from "aws-amplify/utils";
+import { Snowflake, Truck, Users, ArrowRight, CheckCircle2, TrendingDown, Activity } from "lucide-react"
+import { useEffect} from "react";
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from "next/link";
+//import { signIn, signUp, confirmSignUp, signInWithRedirect, fetchAuthSession, confirmSignIn } from 'aws-amplify/auth';
+//import { Amplify } from "aws-amplify";
+//import { Hub } from "aws-amplify/utils";
 
-type Props = Omit<ImageProps, "src"> & {
-  srcLight: string;
-  srcDark: string;
-};
 
-const ThemeImage = (props: Props) => {
-  const { srcLight, srcDark, ...rest } = props;
-
-  return (
-    <>
-      <Image {...rest} src={srcLight} className="imgLight" />
-      <Image {...rest} src={srcDark} className="imgDark" />
-    </>
-  );
-};
 
 // 1. BASE AMPLIFY CONFIGURATION FOR MINISTACK LOCAL TESTING
-const baseConfig = {
-  Auth: {
-    Cognito: {
-      userPoolEndpoint: 'http://localhost:4566', // Points directly to local Ministack container
-      userPoolId: process.env.NEXT_PUBLIC_USER_POOL_ID!,
-     
-      loginWith: {
-       email: true
-      }
-    }
-  }
-};
+// const baseConfig = {
+//   Auth: {
+//     Cognito: {
+//       userPoolEndpoint: 'http://localhost:4566', // Points directly to local Ministack container
+//       userPoolId: process.env.NEXT_PUBLIC_USER_POOL_ID!,
+//       endpoint: 'http://localhost:4566',
+//       loginWith: {
+//        email: true,
+      
+//         oauth: {
+//           //identityProviders: ["Google"],
+//           // This can be a mock domain locally, but must look like a valid endpoint structure
+//           domain: "localhost", 
+//           scheme: 'http', 
+//           scopes: ['openid', 'email', 'profile'],
+//           // MUST match exactly what you whitelisted in your terraform aws_cognito_user_pool_client resource
+//           redirectSignIn: ['http://localhost:3000'], 
+//           redirectSignOut: ['http://localhost:3000'],
+//           responseType: 'code' as const, // Cast to strict literal type for Amplify v6
+//         }
+//       }
+//     }
+//   }
+// };
 
-// RUNTIME SINGLETON MUTATOR FOR DYNAMIC USER-ROLE SWITCHING
-function configureAmplifyForRole(role: 'basic' | 'superadmin') {
-  const clientId = role === 'superadmin'
-    ? process.env.NEXT_PUBLIC_SUPERADMIN_CLIENT_ID!
-    : process.env.NEXT_PUBLIC_BASIC_USER_CLIENT_ID!;
-
-  Amplify.configure({
-    ...baseConfig,
-    Auth: {
-      Cognito: {
-        ...baseConfig.Auth.Cognito,
-        userPoolClientId: clientId
-      }
-    }
-  }, { ssr: true });
-}
 
 
 export default function Home() {
+ 
    // Navigation & View States
-  const [activeForm, setActiveForm] = useState<'superadmin' | 'admin'>('admin');
-  const [adminSubFlow, setAdminSubFlow] = useState<'google' | 'otp_signup' | 'otp_signin'>('google');
+  // const [activeForm, setActiveForm] = useState<'superadmin' | 'admin'>('admin');
+  // const [adminSubFlow, setAdminSubFlow] = useState<'google' | 'otp_signup' | 'otp_signin'>('google');
   
-  // Input fields
-  const [tenantId, setTenantId] = useState('company-alpha');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [otpCode, setOtpCode] = useState('');
+  // // Input fields
+  // const [tenantId, setTenantId] = useState('company-alpha');
+  // const [email, setEmail] = useState('');
+  // const [password, setPassword] = useState('');
+ // const [otpCode, setOtpCode] = useState('');
   
   // Feedback states
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [challengeActive, setChallengeActive] = useState(false);
-  const [sessionData, setSessionData] = useState<any>(null);
-   console.log(sessionData)
+  //const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  //const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  //const [challengeActive, setChallengeActive] = useState(false);
+  //const [sessionData, setSessionData] = useState(null);
+   //console.log(sessionData)
    // 2. LISTEN FOR OAUTH REDIRECTS (Capturing Google return packets)
-  useEffect(() => {
-    // Default to initializing standard client profiles on load
-    configureAmplifyForRole('basic');
+  // useEffect(() => {
+  //   // Default to initializing standard client profiles on load
+  //   configureAmplifyForRole('basic');
 
-    const unsubscribe = Hub.listen('auth', ({ payload }) => {
-      if (payload.event === 'customOAuthState') {
-        setInfoMessage(`Returned via Google redirection! Passed State: ${payload.data}`);
-        checkActiveSession();
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Utility to query active tokens post-login
-  const checkActiveSession = async () => {
-    try {
-      const session = await fetchAuthSession();
-      console.log({session})
-      //const attributes = await fetchUserAttributes();
-        const claims = session.tokens?.idToken?.payload;
-       const tenantId = claims?.['custom:tenant_id'] || claims?.['custom:tenantId'];
-       const tenantType = claims?.['custom:tenant_type'] || claims?.['custom:tenantType'];
-       const role = claims?.['custom:role'] || claims?.['custom:role'];
-      setSessionData({
-        idTokenClaims: session.tokens?.idToken?.payload,
-        customTenant: tenantId,
-        customRole: role,
-        customTenantType: tenantType,
-      });
-      
-      setErrorMessage(null);
-    } catch (err: any) {
-      setSessionData(null);
-    }
-  };
-
-  const clearMessages = () => {
-    setErrorMessage(null);
-    setInfoMessage(null);
-  };
+  //   const unsubscribe = Hub.listen('auth', ({ payload }) => {
+  //     if (payload.event === 'customOAuthState') {
+  //       setInfoMessage(`Returned via Google redirection! Passed State: ${payload.data}`);
+  //       checkActiveSession();
+  //     }
+  //   });
+  //   return () => unsubscribe();
+  // }, []);
 
   // =========================================================================
   // AUTH FLOW EXECUTION HANDLERS
   // =========================================================================
 
   // FLOW A: Super-admin Email & Password Authentication
-  const handleSuperAdminSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    clearMessages();
-    configureAmplifyForRole('superadmin'); // Pivot singleton to Super-admin credentials
-    console.log('Configured Amplify for superadmin')
+  // const handleSuperAdminSignIn = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   clearMessages();
+  //   configureAmplifyForRole('superadmin'); // Pivot singleton to Super-admin credentials
+  //   console.log('Configured Amplify for superadmin')
 
-    try {
-      const { isSignedIn } = await signIn({ username: email, password });
-      if (isSignedIn) {
-        setInfoMessage('Super-admin Authenticated Successfully!');
-        await checkActiveSession();
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Super-admin validation failed.');
-    }
-  };
+  //   try {
+  //     const { isSignedIn } = await signIn({ username: email, password });
+  //     if (isSignedIn) {
+  //       setInfoMessage('Super-admin Authenticated Successfully!');
+  //       await checkActiveSession();
+  //     }
+  //   } catch (err: any) {
+  //     setErrorMessage(err.message || 'Super-admin validation failed.');
+  //   }
+  // };
 
-  // FLOW B: Admin Social Authentication via Google
-  const handleGoogleSocialAuth = async () => {
-    clearMessages();
-    configureAmplifyForRole('basic'); // Pivot singleton to standard Client App ID
+  // // FLOW B: Admin Social Authentication via Google
+  // const handleGoogleSocialAuth = async () => {
+  //   clearMessages();
+  //   configureAmplifyForRole('basic'); // Pivot singleton to standard Client App ID
+   
+  //   try {
+  //     await signInWithRedirect({
+  //       provider: 'Google',
+        
+  //       customState : JSON.stringify({ tenant_id: tenantId, tenant_type: 'vendor', role: 'admin' }) ,
+  //     });
+  //   } catch (err: any) {
+  //     setErrorMessage(err.message || 'OAuth Redirection Blocked.');
+  //   }
+  // };
 
-    try {
-      await signInWithRedirect({
-        provider: 'Google',
-        customState : JSON.stringify({ tenant_id: tenantId, tenant_type: 'vendor', role: 'admin' }) ,
-      });
-    } catch (err: any) {
-      setErrorMessage(err.message || 'OAuth Redirection Blocked.');
-    }
-  };
 
-  // FLOW C: Admin Native Sign-Up (Triggers Custom Pre-Signup/Post-Confirmation)
-  const handleAdminOtpSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    clearMessages();
-    configureAmplifyForRole('basic');
+  // // FLOW D: Admin OTP Verification (Submitting the code to finalize user account)
+  // const handleAdminVerifyOtp = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   clearMessages();
+  //   configureAmplifyForRole('basic');
 
-    try {
-      const { nextStep } = await signUp({
-        username: email,
-        password: 'PasswordBypass123!', // Placeholder because flow expects OTP later
-        options: {
-          userAttributes: { email },
-          // Passed directly for direct non-redirect API calls
-          clientMetadata: { tenantId, role: 'admin', tenantType: 'vendor' } 
-        }
-      });
+  //   try {
+  //     const { isSignUpComplete } = await confirmSignUp({
+  //       username: email,
+  //       confirmationCode: otpCode,
+  //       options: {
+  //         // Carry context forward to the Post-Confirmation execution lambda
+  //         clientMetadata: { tenantId, role: 'admin' }
+  //       }
+  //     });
 
-      setInfoMessage(`Registration initiated! Stage: ${nextStep.signUpStep}. Check your Ministack terminal for the confirmation code.`);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Registration failure.');
-    }
-  };
+  //     if (isSignUpComplete) {
+  //       setInfoMessage('Account Confirmed! Your custom tenant attributes have been permanently saved. You can now use the email OTP flow.');
+  //       setAdminSubFlow('otp_signin');
+  //     }
+  //   } catch (err: any) {
+  //     setErrorMessage(err.message || 'Validation code rejection.');
+  //   }
+  // };
 
-  // FLOW D: Admin OTP Verification (Submitting the code to finalize user account)
-  const handleAdminVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    clearMessages();
-    configureAmplifyForRole('basic');
+  // const handleSubmitLoginOtp = async (e: React.FormEvent) => {
+  //    e.preventDefault();
+  //   clearMessages();
+  //   configureAmplifyForRole('basic');
+  //    if (!otpCode || otpCode.trim().length !== 6) {
+  //   setErrorMessage('Please enter a valid 6-digit confirmation PIN.');
+  //   return;
+  // }
+  //   try {
+  //     const { isSignedIn, nextStep } = await confirmSignIn({challengeResponse : otpCode.trim()})
+  //        if (isSignedIn) {
+  //       setInfoMessage('Admin Custom OTP Authenticated Successfully!');
+  //       setChallengeActive(false); // Reset the UI form challenge visibility toggle
+  //       setOtpCode('');
+  //        await checkActiveSession();
+  //     } else {
+  //       setInfoMessage(`Additional authentication step required: ${nextStep.signInStep}`);
+  //     }
+  //   } catch (err: any) {
+  //     setErrorMessage(err.message || 'Admin validation failed.');
+  //   }
+  // };
 
-    try {
-      const { isSignUpComplete } = await confirmSignUp({
-        username: email,
-        confirmationCode: otpCode,
-        options: {
-          // Carry context forward to the Post-Confirmation execution lambda
-          clientMetadata: { tenantId, role: 'admin' }
-        }
-      });
+  // // FLOW E: Direct Email OTP Passwordless Sign-In
+  // const handleAdminOtpSignIn = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   clearMessages();
+  //   configureAmplifyForRole('basic');
 
-      if (isSignUpComplete) {
-        setInfoMessage('Account Confirmed! Your custom tenant attributes have been permanently saved. You can now use the email OTP flow.');
-        setAdminSubFlow('otp_signin');
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Validation code rejection.');
-    }
-  };
-
-  const handleSubmitLoginOtp = async (e: React.FormEvent) => {
-     e.preventDefault();
-    clearMessages();
-    configureAmplifyForRole('basic');
-     if (!otpCode || otpCode.trim().length !== 6) {
-    setErrorMessage('Please enter a valid 6-digit confirmation PIN.');
-    return;
-  }
-    try {
-      const { isSignedIn, nextStep } = await confirmSignIn({challengeResponse : otpCode.trim()})
-         if (isSignedIn) {
-        setInfoMessage('Admin Custom OTP Authenticated Successfully!');
-        setChallengeActive(false); // Reset the UI form challenge visibility toggle
-        setOtpCode('');
-         await checkActiveSession();
-      } else {
-        setInfoMessage(`Additional authentication step required: ${nextStep.signInStep}`);
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Admin validation failed.');
-    }
-  };
-
-  // FLOW E: Direct Email OTP Passwordless Sign-In
-  const handleAdminOtpSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    clearMessages();
-    configureAmplifyForRole('basic');
-
-    try {
-      const { nextStep } = await signIn({
-        username: email,
-        options: {
-          authFlowType: 'CUSTOM_WITHOUT_SRP',
-          clientMetadata: { tenantId, role: 'admin' }
-        }
-      });
-      if(nextStep.signInStep === 'CONFIRM_SIGN_IN_WITH_CUSTOM_CHALLENGE') {
-        setInfoMessage(`Challenge created: ${nextStep.signInStep}. Pull code from Ministack logs.`);
-        setChallengeActive(true);
-        setOtpCode('');
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'OTP Challenge initiation failed.');
-    }
-  };
+  //   try {
+  //     const { nextStep } = await signIn({
+  //       username: email,
+  //       options: {
+  //         authFlowType: 'CUSTOM_WITHOUT_SRP',
+  //         clientMetadata: { tenantId, role: 'admin' }
+  //       }
+  //     });
+  //     if(nextStep.signInStep === 'CONFIRM_SIGN_IN_WITH_CUSTOM_CHALLENGE') {
+  //       setInfoMessage(`Challenge created: ${nextStep.signInStep}. Pull code from Ministack logs.`);
+  //       setChallengeActive(true);
+  //       setOtpCode('');
+  //     }
+  //   } catch (err: any) {
+  //     setErrorMessage(err.message || 'OTP Challenge initiation failed.');
+  //   }
+  // };
 
   return (
-    <div style={{ maxWidth: '800px', margin: '40px auto', padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1 style={{ borderBottom: '2px solid #ccc', paddingBottom: '10px' }}>🔐 Ministack Multitenant Auth Panel</h1>
-
-      {/* GLOBAL NOTIFICATION BLOCKS */}
-      {errorMessage && <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '12px', borderRadius: '4px', margin: '15px 0' }}>⚠️ {errorMessage}</div>}
-      {infoMessage && <div style={{ background: '#DBEAFE', color: '#1E40AF', padding: '12px', borderRadius: '4px', margin: '15px 0' }}>ℹ️ {infoMessage}</div>}
-
-      {/* CORE CONFIGURATION CONTROLS */}
-      <div style={{ background: '#F3F4F6', padding: '15px', borderRadius: '6px', marginBottom: '25px' }}>
-        <h3>🏗️ System Simulation Variables</h3>
-        <label style={{ display: 'block', marginBottom: '10px' }}>
-          <strong>Target Tenant Context Identifier:</strong>
-          <input type="text" value={tenantId} onChange={(e) => setTenantId(e.target.value)} style={{ display: 'block', width: '100%', padding: '8px', marginTop: '5px' }} />
-        </label>
-        
-        <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-          <button onClick={() => { setActiveForm('admin'); clearMessages(); }} style={{ flex: 1, padding: '10px', background: activeForm === 'admin' ? '#2563EB' : '#E5E7EB', color: activeForm === 'admin' ? '#fff' : '#000', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Admin Portal (Social / OTP)</button>
-          <button onClick={() => { setActiveForm('superadmin'); clearMessages(); }} style={{ flex: 1, padding: '10px', background: activeForm === 'superadmin' ? '#2563EB' : '#E5E7EB', color: activeForm === 'superadmin' ? '#fff' : '#000', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Super-admin Portal (Password)</button>
-        </div>
-      </div>
-
-      {/* VIEW PANEL A: SUPERADMIN LOGIN FORM */}
-      {activeForm === 'superadmin' && (
-        <form onSubmit={handleSuperAdminSignIn} style={{ border: '1px solid #E5E7EB', padding: '20px', borderRadius: '6px' }}>
-          <h2>⚡ Super-admin Portal Access</h2>
-          <p style={{ color: '#6B7280', fontSize: '14px' }}>Expects pre-populated Cognito database profile credentials.</p>
-          <input type="email" placeholder="Super-admin Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ display: 'block', width: '100%', padding: '10px', marginBottom: '10px' }} />
-          <input type="password" placeholder="Account Password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ display: 'block', width: '100%', padding: '10px', marginBottom: '15px' }} />
-          <button type="submit" style={{ width: '100%', padding: '12px', background: '#059669', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>Authenticate via Password</button>
-        </form>
-      )}
-
-      {/* VIEW PANEL B: ADMIN MULTI-FLOW OPTIONS */}
-      {activeForm === 'admin' && (
-        <div style={{ border: '1px solid #E5E7EB', padding: '20px', borderRadius: '6px' }}>
-          <h2>💼 Administrator Access</h2>
-          
-          <div style={{ display: 'flex', gap: '5px', marginBottom: '20px', fontSize: '12px' }}>
-            <button onClick={() => setAdminSubFlow('google')} style={{ background: adminSubFlow === 'google' ? '#4B5563' : '#F3F4F6', color: adminSubFlow === 'google' ? '#fff' : '#000', padding: '6px 12px', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>1. Google Redirect</button>
-            <button onClick={() => setAdminSubFlow('otp_signup')} style={{ background: adminSubFlow === 'otp_signup' ? '#4B5563' : '#F3F4F6', color: adminSubFlow === 'otp_signup' ? '#fff' : '#000', padding: '6px 12px', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>2. Initial OTP Sign-Up</button>
-            <button onClick={() => setAdminSubFlow('otp_signin')} style={{ background: adminSubFlow === 'otp_signin' ? '#4B5563' : '#F3F4F6', color: adminSubFlow === 'otp_signin' ? '#fff' : '#000', padding: '6px 12px', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>3. Regular OTP Login</button>
+  <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b border-border bg-background/80 backdrop-blur sticky top-0 z-20">
+        <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 font-display font-bold text-lg">
+            <span className="w-7 h-7 rounded-md bg-primary text-primary-foreground grid place-items-center">A</span>
+            AgroShare <span className="text-accent">Ghana</span>
+          </Link>
+          <nav className="hidden md:flex items-center gap-7 text-sm text-muted-foreground">
+            <a href="#problem" className="hover:text-foreground">The Problem</a>
+            <a href="#tenants" className="hover:text-foreground">Tenant Types</a>
+            <a href="#how" className="hover:text-foreground">How it Works</a>
+          </nav>
+          <div className="flex items-center gap-2">
+            <Link href="/auth" className="text-sm px-3 py-2 rounded-md hover:bg-muted">Sign in</Link>
+            <Link href="/onboard" className="text-sm px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90">
+              Get Started
+            </Link>
           </div>
-
-          {adminSubFlow === 'google' && (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <p style={{ marginBottom: '15px' }}>Will transmit <strong>{tenantId}</strong> to Cognito via customState parameters.</p>
-              <button onClick={handleGoogleSocialAuth} style={{ padding: '12px 24px', background: '#EA4335', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>Continue with Google OAuth</button>
-            </div>
-          )}
-
-          {adminSubFlow === 'otp_signup' && (
-            <div>
-              <form onSubmit={handleAdminOtpSignUp} style={{ marginBottom: '20px' }}>
-                <h3 style={{ marginBottom: '10px' }}>Step A: Register Email ID</h3>
-                <input type="email" placeholder="Admin Corporate Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ display: 'block', width: '100%', padding: '10px', marginBottom: '10px' }} />
-                <button type="submit" style={{ padding: '10px 20px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Send Registration Packet</button>
-              </form>
-              <form onSubmit={handleAdminVerifyOtp} style={{ marginBottom: '20px' }}>
-                <h3 style={{ marginBottom: '10px' }}>Step B: Verify Accounts (Fires Post-Confirmation)</h3>
-                <input type="text" placeholder="6-digit Confirmation Code" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} required style={{ display: 'block', width: '100%', padding: '10px', marginBottom: '10px' }} />
-                <button type="submit" style={{ padding: '10px 20px', background: '#10B981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Submit Code</button>
-              </form>
-            </div>
-          )}
-
-          {adminSubFlow === 'otp_signin' && (
-            <>
-            <form onSubmit={handleAdminOtpSignIn}>
-              <h3 style={{ marginBottom: '10px' }}>Request Verification Challenge Link</h3>
-              <input type="email" placeholder="Enter Registered Admin Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ display: 'block', width: '100%', padding: '10px', marginBottom: '10px' }} />
-              <button type="submit" style={{ padding: '12px 20px', background: '#4F46E5', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>Request Secure OTP Pin</button>
-            </form>
-            {adminSubFlow === 'otp_signin' && challengeActive && (
-              <form onSubmit={handleSubmitLoginOtp}>
-                <h3 style={{ marginBottom: '10px' }}>Step B: Verify Account (Fires Post-Confirmation)</h3>
-                <input type="text" placeholder="6-digit Confirmation Code" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} required style={{ display: 'block', width: '100%', padding: '10px', marginBottom: '10px' }} />
-                <button type="submit" style={{ padding: '10px 20px', background: '#10B981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Submit Code</button>
-              </form>
-            )}
-            </>
-          )}
-
-      {/* SESSION & JWT CLAIMS DEBUGGER COUCH */}
-      {sessionData && (
-        <div style={{ marginTop: '30px', padding: '15px', background: '#1E293B', color: '#38BDF8', borderRadius: '6px', fontFamily: 'monospace', overflowX: 'auto' }}>
-          <h3 style={{ color: '#F1F5F9', marginTop: 0 }}>📊 Decoded Session Claims Token (Ministack Output Verification)</h3>
-          <p style={{ marginBottom: '5px' }}>Resolved Profile Tenant ID: <span style={{ color: '#34D399' }}>{sessionData.customTenant || 'None'}</span></p>
-          <p style={{ marginBottom: '15px' }}>Resolved Profile User Role: <span style={{ color: '#34D399' }}>{sessionData.customRole || 'None'}</span></p>
-          <details>
-            <summary style={{ cursor: 'pointer', color: '#94A3B8' }}>View Full Raw ID Token JWT Payload JSON</summary>
-            <pre style={{ color: '#F8FAFC', marginTop: '10px' }}>{JSON.stringify(sessionData.idTokenClaims, null, 2)}</pre>
-          </details>
         </div>
-      )}
-    </div>
-)}
-</div>
-  )
+      </header>
 
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,oklch(0.32_0.07_145/.18),transparent_60%)]" />
+        <div className="mx-auto max-w-7xl px-6 py-20 grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1 rounded-full bg-accent/15 text-accent-foreground border border-accent/30 mb-5">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" /> Live across 7 regions in Ghana
+            </div>
+            <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-[1.05]">
+              Shared infrastructure for <span className="text-primary">Ghana&apos;s</span> next harvest.
+            </h1>
+            <p className="mt-6 text-lg text-muted-foreground max-w-xl">
+              AgroShare connects farmer cooperatives, mechanization fleets, and cold-chain operators on one
+              platform — cutting post-harvest loss and unlocking idle machinery from Tamale to Techiman.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/onboard" className="inline-flex items-center gap-2 px-5 py-3 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90">
+                Start onboarding <ArrowRight className="w-4 h-4" />
+              </Link>
+              {/* <Link href="/login" className="inline-flex items-center gap-2 px-5 py-3 rounded-md border border-border bg-card hover:bg-muted font-medium">
+                Try a demo persona
+              </Link> */}
+            </div>
+            <div className="mt-10 grid grid-cols-3 gap-4 max-w-md">
+              <Stat value="38%" label="Post-harvest loss cut" />
+              <Stat value="2.4×" label="Tractor utilization" />
+              <Stat value="GH₵12M" label="Escrow processed" />
+            </div>
+          </div>
+          <div className="relative">
+            <div className="rounded-2xl border border-border bg-card shadow-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-xs font-medium text-muted-foreground">LIVE NETWORK</div>
+                <div className="text-xs text-accent flex items-center gap-1"><Activity className="w-3 h-3" /> 142 nodes online</div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Techiman Hub", v: "84%", c: "bg-primary" },
+                  { label: "Tamale Yard", v: "12 active", c: "bg-accent" },
+                  { label: "Accra Cold 2", v: "4.2°C", c: "bg-chart-3" },
+                  { label: "Ejura Field", v: "Plowing", c: "bg-primary" },
+                  { label: "Kumasi Depot", v: "67%", c: "bg-chart-5" },
+                  { label: "Sunyani Co-op", v: "203 farmers", c: "bg-accent" },
+                ].map((x) => (
+                  <div key={x.label} className="rounded-lg border border-border p-3 bg-background">
+                    <div className={`w-2 h-2 rounded-full ${x.c} mb-2`} />
+                    <div className="text-[11px] text-muted-foreground">{x.label}</div>
+                    <div className="text-sm font-semibold mt-1">{x.v}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 rounded-lg bg-primary text-primary-foreground p-4 flex items-center justify-between">
+                <div>
+                  <div className="text-xs opacity-80">Escrow cleared today</div>
+                  <div className="text-2xl font-bold font-display">GH₵ 84,250.00</div>
+                </div>
+                <div className="text-xs bg-primary-foreground/15 px-2 py-1 rounded">+12%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="problem" className="border-y border-border bg-card">
+        <div className="mx-auto max-w-7xl px-6 py-16 grid md:grid-cols-3 gap-8">
+          <Problem icon={<TrendingDown className="w-5 h-5" />} title="40% of harvests rot before market" body="Tomato, yam, and pepper losses cost Ghanaian farmers GH₵2B+ annually due to fragmented cold storage." />
+          <Problem icon={<Truck className="w-5 h-5" />} title="Tractors idle 6 months a year" body="Mechanization fleets in Tamale and Kumasi are booked privately; cooperatives can't reach them." />
+          <Problem icon={<Users className="w-5 h-5" />} title="Cash never reaches the field" body="Bulk orders collapse without trust. We escrow MoMo payments and auto-split on GPS-verified completion." />
+        </div>
+      </section>
+
+      <section id="tenants" className="mx-auto max-w-7xl px-6 py-20">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold">Three tenant types. One unified platform.</h2>
+          <p className="mt-4 text-muted-foreground">The interface morphs to your role. Pick yours during onboarding.</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          <TenantCard color="bg-primary" icon={<Users className="w-5 h-5" />} title="Farmer Cooperative" body="Member registry, bulk ordering, USSD shortcode for offline farmers." features={["Digital Farmer Registry", "Bulk Supply Orders", "USSD *714*45#"]} />
+          <TenantCard color="bg-accent" icon={<Truck className="w-5 h-5" />} title="Mechanization Fleet" body="Live GPS fleet control, driver dispatch queue, maintenance logbook." features={["Live Fleet Map", "Dispatch Queue", "Fuel & Engine Hours"]} />
+          <TenantCard color="bg-chart-3" icon={<Snowflake className="w-5 h-5" />} title="Cold-Chain Operator" body="Volumetric capacity, IoT temperature telemetry, storage billing ledger." features={["Capacity Monitor", "IoT Telemetry", "GH₵/crate Billing"]} />
+        </div>
+      </section>
+
+      <section id="how" className="bg-primary text-primary-foreground">
+        <div className="mx-auto max-w-7xl px-6 py-16 grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <h2 className="text-3xl md:text-4xl font-bold">Mobile Money escrow, GPS-verified payouts.</h2>
+            <p className="mt-4 opacity-85 max-w-lg">Every transaction flows through a shared escrow engine. Funds lock on order, release on field completion, and split automatically — vendor, cooperative, and platform.</p>
+          </div>
+          <div className="rounded-xl bg-primary-foreground/10 backdrop-blur p-6 space-y-3 border border-primary-foreground/20">
+            {[
+              { l: "Locked Funds", v: "GH₵ 142,800.00" },
+              { l: "Vendor Payouts (85%)", v: "GH₵ 121,380.00" },
+              { l: "Platform Commission (5%)", v: "GH₵ 7,140.00" },
+            ].map(r => (
+              <div key={r.l} className="flex justify-between items-center py-2 border-b border-primary-foreground/15 last:border-0">
+                <span className="text-sm opacity-80">{r.l}</span>
+                <span className="font-mono font-semibold">{r.v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-border">
+        <div className="mx-auto px-6 py-10 flex items-center justify-center text-sm text-muted-foreground">
+          <div>© 2026 AgroShare Ghana. Built in Accra.</div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <div>
+      <div className="text-2xl font-bold font-display text-primary">{value}</div>
+      <div className="text-xs text-muted-foreground mt-1">{label}</div>
+    </div>
+  );
+}
+
+function Problem({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
+  return (
+    <div>
+      <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary grid place-items-center mb-3">{icon}</div>
+      <h3 className="font-semibold text-lg">{title}</h3>
+      <p className="mt-2 text-sm text-muted-foreground">{body}</p>
+    </div>
+  );
+}
+
+function TenantCard({ color, icon, title, body, features }: { color: string; icon: React.ReactNode; title: string; body: string; features: string[] }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-6 hover:shadow-lg transition-shadow">
+      <div className={`w-10 h-10 rounded-lg ${color} text-white grid place-items-center mb-4`}>{icon}</div>
+      <h3 className="font-semibold text-lg">{title}</h3>
+      <p className="mt-2 text-sm text-muted-foreground">{body}</p>
+      <ul className="mt-4 space-y-2">
+        {features.map(f => (
+          <li key={f} className="flex items-center gap-2 text-sm"><CheckCircle2 className="w-4 h-4 text-primary" /> {f}</li>
+        ))}
+      </ul>
+    </div>
+  );
+  
 }
   

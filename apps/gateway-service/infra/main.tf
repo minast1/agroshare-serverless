@@ -100,6 +100,9 @@ resource "aws_cognito_user_pool" "main" {
   name                     = "agroshare-userpool"
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
+  username_configuration {
+    case_sensitive = false
+  }
   #user_pool_tier           = "PLUS"
   # Password Policy 
   password_policy {
@@ -148,6 +151,8 @@ resource "aws_cognito_user_pool" "main" {
       max_length = 50
     }
   }
+
+
   #Email Configuration
   email_configuration {
     email_sending_account = "COGNITO_DEFAULT"
@@ -231,8 +236,8 @@ resource "aws_cognito_user_pool_client" "admin" {
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_flows                  = ["code", "implicit"]
   allowed_oauth_scopes                 = ["email", "openid", "profile"]
-  callback_urls                        = ["https://localhost:3000"]
-  logout_urls                          = ["https://localhost:3000"]
+  callback_urls                        = ["http://localhost:3000"]
+  logout_urls                          = ["http://localhost:3000"]
   generate_secret                      = false
   #Token Validity 
   access_token_validity  = 1
