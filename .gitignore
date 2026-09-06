@@ -26,12 +26,18 @@ coverage
 .terraform_artifacts/
 *.tfstate
 *.tfstate.*
+*.tfvars
+*.tfvars.json
+!example.tfvars
+!*.example.tfvars
 
 # Build Outputs
 .next/
 out/
 build
+builds/
 dist
+*.tsbuildinfo
 
 
 # Debug

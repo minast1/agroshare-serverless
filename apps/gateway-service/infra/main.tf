@@ -1,30 +1,17 @@
-resource "terraform_data" "lambda_esbuild_compiler" {
-  triggers_replace = {
-    code_hash = sha1(join("", [for f in fileset("${path.module}/..", "src/**/*.ts") : filesha1("${path.module}/../${f}")]))
-  }
+# resource "terraform_data" "lambda_esbuild_compiler" {
+#   triggers_replace = {
+#     code_hash = sha1(join("", [for f in fileset("${path.module}/..", "src/**/*.ts") : filesha1("${path.module}/../${f}")]))
+#   }
 
-  provisioner "local-exec" {
-    command = "cd ${path.module}/../../.. && pnpm turbo run build:lambda --filter gateway-service"
-  }
-}
-
-data "archive_file" "custom_email_lambda" {
-  type        = "zip"
-  source_dir  = "${path.module}/../dist"
-  output_path = "${path.module}/../.terraform_artifacts/lambda.zip"
-  depends_on  = [terraform_data.lambda_esbuild_compiler]
-}
+#   provisioner "local-exec" {
+#     command = var.environment == "dev" ? "cd ${path.module}/../../.. && pnpm turbo run infra:bootstrap --filter gateway-service" : "echo 'Skipping esbuild compilation; environment is not dev.'"
+#   }
+# }
 
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
-
-
-module "kms_key" {
-  source      = "cloudposse/kms-key/aws"
-  namespace   = "agroshare"
-  stage       = var.environment
-  name        = "gateway_service"
-  description = "KMS key for gateway service"
+data "aws_ssm_parameter" "ses_arn" {
+  name = "/agroshare/${var.environment}/ses/domain_identity_arn"
 }
 
 # **********************************
@@ -42,9 +29,13 @@ module "cognito_auth_lambda" {
     AWS_REGION            = data.aws_region.current.region
     RESEND_API_KEY        = var.resend_api_key
   }
-  create_package          = false
-  local_existing_package  = "${path.module}/../.terraform_artifacts/lambda.zip"
-  ignore_source_code_hash = true
+  create_package          = true
+  local_existing_package  = null
+  ignore_source_code_hash = false
+  source_path = [
+    "${path.module}/../dist"
+  ]
+  # depends_on = [terraform_data.lambda_esbuild_compiler]
   allowed_triggers = {
     Cognito = {
       principal  = "cognito-idp.amazonaws.com"
@@ -64,14 +55,14 @@ module "cognito_auth_lambda" {
     },
     "ses_send_raw_email" = {
       effect    = "Allow"
-      actions   = ["ses:SendRawEmail"]
+      actions   = ["ses:SendRawEmail", "ses:SendEmail", "ses:SendTemplatedEmail", "ses:SendBulkTemplatedEmail"]
       resources = ["*"]
     },
-    "kms_decrypt" = {
-      effect    = "Allow"
-      actions   = ["kms:Decrypt", "kms:CreateGrant"]
-      resources = ["*"]
-    },
+    # "kms_decrypt" = {
+    #   effect    = "Allow"
+    #   actions   = ["kms:Decrypt", "kms:CreateGrant"]
+    #   resources = ["*"]
+    # },
     "cognito_user_profile_update_policy" = {
       effect = "Allow"
       actions = [
@@ -155,7 +146,10 @@ resource "aws_cognito_user_pool" "main" {
 
   #Email Configuration
   email_configuration {
-    email_sending_account = "COGNITO_DEFAULT"
+    email_sending_account  = var.environment == "dev" ? "COGNITO_DEFAULT" : "DEVELOPER"
+    from_email_address     = var.environment == "dev" ? "Agroshare Ghana <no-reply@agroshare.gh>" : "${var.domain}"
+    reply_to_email_address = "support@agroshare.gh"
+    source_arn             = var.environment == "dev" ? null : data.aws_ssm_parameter.ses_arn.value
   }
 
   #Lambda Configurations 
@@ -172,9 +166,6 @@ resource "aws_cognito_user_pool" "main" {
     verify_auth_challenge_response = module.cognito_auth_lambda.lambda_function_arn
     define_auth_challenge          = module.cognito_auth_lambda.lambda_function_arn
     create_auth_challenge          = module.cognito_auth_lambda.lambda_function_arn
-    kms_key_id                     = module.kms_key.key_arn
-
-
   }
   user_pool_add_ons {
     advanced_security_mode = "AUDIT"
@@ -370,4 +361,6 @@ module "ssm-parameter-store" {
       overwrite = "true"
     }
   ]
+
+  parameter_read = ["value"]
 }

@@ -1,16 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
-//import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import {
   CreateAuthChallengeTriggerEvent,
   DefineAuthChallengeTriggerEvent,
   VerifyAuthChallengeResponseTriggerEvent,
 } from 'aws-lambda';
-import { ResendService } from 'nestjs-resend';
 
 @Injectable()
 export class AuthChallengeService {
   private readonly logger = new Logger(AuthChallengeService.name);
-  constructor(private readonly resend: ResendService) {}
+  private readonly sesClient: SESClient;
+  constructor() {
+    this.sesClient = new SESClient({
+      region: 'us-east-1',
+    });
+  }
 
   handleDefineAuthChallenge(event: DefineAuthChallengeTriggerEvent) {
     this.logger.log('Auth Define Trigger: ' + JSON.stringify(event, null, 2));
@@ -76,21 +80,35 @@ export class AuthChallengeService {
 
   private async sendOTPEmail(email: string, otpCode: string) {
     try {
-      await this.resend.emails.send({
-        from: 'onboarding@resend.dev',
-        to: email,
-        subject: 'Your OTP Code',
-        html: `<p>Your 6-digit access code is: <strong>${otpCode}</strong></p>`,
+      const fromAddress =
+        process.env.NODE_ENV === 'dev'
+          ? 'Agroshare Ghana <no-reply@agroshare.gh>'
+          : process.env.PRODUCTION_FROM_EMAIL;
+
+      const command = new SendEmailCommand({
+        Source: fromAddress,
+        Destination: { ToAddresses: [email] },
+        Message: {
+          Subject: { Data: 'Your Agroshare OTP Code' },
+          Body: {
+            Html: {
+              Charset: 'UTF-8',
+              Data: `<p>Your 6-digit access code is: <strong>${otpCode}</strong></p>`,
+            },
+            Text: {
+              Charset: 'UTF-8',
+              Data: `<div style="font-family: sans-serif; padding: 20px;">
+                <h2>Agroshare Admin Portal</h2>
+                <p>Your single-use access code is:</p>
+                <h1 style="font-size: 32px; letter-spacing: 5px; color: #2e7d32;">${otpCode}</h1>
+              </div>`,
+            },
+          },
+        },
       });
+      await this.sesClient.send(command);
     } catch (error: unknown) {
       this.logger.error((error as Error).message || 'Error sending OTP email');
-      this.logger.error(`[RESEND API FAILURE]: ${(error as Error).message}`);
-
-      console.log(`\n======================================================`);
-      console.log(
-        `[FALLBACK LOG] RESEND FAILED. YOUR LOGIN PIN IS: ${otpCode}`,
-      );
-      console.log(`======================================================\n`);
     }
   }
 }

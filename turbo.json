@@ -16,11 +16,12 @@
       "cache": false,
       "persistent": true
     },
-  
-    "build:lambda": {
+
+    "infra:bootstrap": {
+      "dependsOn": ["build"],
       "inputs": ["src/**/*.ts", "esbuild.cjs", "tsconfig.json"],
       "outputs": ["dist/**"]
     }
-  
+
   }
 }

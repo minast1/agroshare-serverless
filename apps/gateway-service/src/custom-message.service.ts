@@ -19,6 +19,10 @@ export class CognitoCustomMessageService {
       event.response.emailSubject = 'Reset Your Password - AgroShare';
       event.response.emailMessage = this.getForgotPasswordTemplate(code);
     }
+
+    if (triggerSource === 'CustomMessage_ResendCode') {
+      console.log('Resend Code Trigger');
+    }
     return event;
   }
 

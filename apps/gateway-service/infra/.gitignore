@@ -19,6 +19,8 @@ crash.*.log
 # 3. Local Cache Directories (Heavy Download Clutter)
 # ==========================================
 .terraform/
+build/
+builds/
 
 # ==========================================
 # 4. Developer Tools & OS Fluff
