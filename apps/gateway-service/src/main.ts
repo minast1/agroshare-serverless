@@ -10,7 +10,6 @@ import {
   PreTokenGenerationAuthenticationV2TriggerEvent,
   VerifyAuthChallengeResponseTriggerEvent,
 } from 'aws-lambda';
-import { INestApplicationContext } from '@nestjs/common';
 import { AuthChallengeService } from './auth-challenge.service';
 import { PreTokenGenerationService } from './pre-token.service';
 import { PostConfirmationService } from './post-confirmation.service';
@@ -24,19 +23,11 @@ type CognitoTriggerEvent =
   | PreTokenGenerationAuthenticationV2TriggerEvent
   | PostConfirmationTriggerEvent
   | PreSignUpTriggerEvent;
-let cachedAppContext: INestApplicationContext;
-
-async function bootstrapContext(): Promise<INestApplicationContext> {
-  if (!cachedAppContext) {
-    cachedAppContext = await NestFactory.createApplicationContext(AppModule);
-  }
-  return cachedAppContext;
-}
 
 export const handler = async (
   event: CognitoTriggerEvent,
 ): Promise<CognitoTriggerEvent> => {
-  const appContext = await bootstrapContext();
+  const appContext = await NestFactory.createApplicationContext(AppModule);
   const trigger = event.triggerSource;
   //Custom Message Trigger
   if (trigger.startsWith('CustomMessage_')) {

@@ -1,12 +1,3 @@
-# resource "terraform_data" "lambda_esbuild_compiler" {
-#   triggers_replace = {
-#     code_hash = sha1(join("", [for f in fileset("${path.module}/..", "src/**/*.ts") : filesha1("${path.module}/../${f}")]))
-#   }
-
-#   provisioner "local-exec" {
-#     command = var.environment == "dev" ? "cd ${path.module}/../../.. && pnpm turbo run infra:bootstrap --filter gateway-service" : "echo 'Skipping esbuild compilation; environment is not dev.'"
-#   }
-# }
 
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
@@ -23,19 +14,12 @@ module "cognito_auth_lambda" {
   handler       = "index.handler"
   runtime       = "nodejs22.x"
   environment_variables = {
-    AWS_ACCESS_KEY_ID     = var.aws_access_key_id
-    AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
-    AWS_SES_ENDPOINT      = var.environment == "dev" ? "http://localhost:4566" : null
-    AWS_REGION            = data.aws_region.current.region
-    RESEND_API_KEY        = var.resend_api_key
+    AWS_SES_ENDPOINT = var.environment == "dev" ? "http://localhost:4566" : null
+    AWS_REGION       = data.aws_region.current.region
+    RESEND_API_KEY   = var.resend_api_key
   }
-  create_package          = true
-  local_existing_package  = null
-  ignore_source_code_hash = false
-  source_path = [
-    "${path.module}/../dist"
-  ]
-  # depends_on = [terraform_data.lambda_esbuild_compiler]
+  source_path   = "${path.module}/../dist"
+  artifacts_dir = "${path.module}/lambda-builds/"
   allowed_triggers = {
     Cognito = {
       principal  = "cognito-idp.amazonaws.com"
@@ -72,18 +56,6 @@ module "cognito_auth_lambda" {
     }
   }
   role_name = "cognito_unified_auth_lambda_role"
-  assume_role_policy_statements = {
-    lambda_service = {
-      effect  = "Allow"
-      actions = ["sts:AssumeRole"]
-      principals = {
-        service_principal = {
-          type        = "Service"
-          identifiers = ["lambda.amazonaws.com"]
-        }
-      }
-    }
-  }
 }
 
 

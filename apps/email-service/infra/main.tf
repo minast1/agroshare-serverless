@@ -1,3 +1,78 @@
+# **********************************
+#          EMAIL SQS QUEUE *
+# **********************************
+
+module "email_sqs_queue" {
+  source = "terraform-aws-modules/sqs/aws"
+
+  name                      = "email_service_sqs_queue"
+  message_retention_seconds = 86400 # 24 hours retention
+  delay_seconds             = 0
+  max_message_size          = 262144
+  receive_wait_time_seconds = 20
+  tags = {
+    Name = "email_service_sqs_queue"
+  }
+}
+
+
+
+# **********************************
+#          EMAIL SERVICE LAMBDA *
+# **********************************
+module "email_service_lambda" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name = "agroshare_email_service"
+  handler       = "index.handler"
+  runtime       = "nodejs22.x"
+  environment_variables = {
+    AWS_SES_ENDPOINT = var.NODE_ENV == "dev" ? "http://localhost:4566" : null
+    AWS_REGION       = data.aws_region.current.region
+  }
+  source_path                       = "${path.module}/../dist"
+  artifacts_dir                     = "${path.module}/lambda-builds/"
+  cloudwatch_logs_retention_in_days = 3
+  create_lambda_function_url        = true
+  allowed_triggers = {
+    SESInvokeTrigger = {
+      principal  = "sqs.amazonaws.com"
+      source_arn = module.email_sqs_queue.queue_arn
+    }
+  }
+  event_source_mapping = {
+    sqs_queue_trigger = {
+      event_source_arn = module.email_sqs_queue.queue_arn
+      batch_size       = 8
+      enabled          = true
+    }
+  }
+  attach_policy_statements = true
+  policy_statements = {
+    "cloudwatch_logs" = {
+      actions = [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ]
+      effect    = "Allow"
+      resources = ["arn:aws:logs:*:*:*"]
+    },
+    "ses_send_email" = {
+      effect    = "Allow"
+      actions   = ["ses:SendRawEmail", "ses:SendEmail", "ses:SendTemplatedEmail", "ses:SendBulkTemplatedEmail"]
+      resources = ["*"] # Restrict to your domain identity ARN variable in production if needed
+    },
+    "sqs_receive_delete" = {
+      effect    = "Allow"
+      actions   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+      resources = [module.email_sqs_queue.queue_arn]
+    },
+  }
+  role_name = "agroshare_email_service_lambda_role"
+
+}
+
 
 # **********************************
 #          EMAIL SERVICE MODULE
@@ -30,5 +105,11 @@ module "ssm-parameter-store" {
       value     = module.ses.domain_identity_arn
       overwrite = "true"
     },
+    {
+      name      = "/agroshare/${var.NODE_ENV}/sqs/email_queue_url"
+      type      = "String"
+      value     = module.email_sqs_queue.queue_url
+      overwrite = "true"
+    }
   ]
 }
