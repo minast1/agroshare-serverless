@@ -1,5 +1,5 @@
 {
-  "name": "email-service",
+  "name": "@agroshare/email-service",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -9,6 +9,7 @@
     "type-check": "tsc --noEmit",
     "build": "pnpm type-check && node esbuild.cjs",
     "build:lambda": "pnpm type-check && node esbuild.cjs",
+    "infra:deploy": "cd infra && terraform init && terraform apply -auto-approve",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -40,6 +41,8 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",
+    "esbuild": "^0.28.1",
+    "esbuild-plugin-tsc": "^0.6.0",
     "@types/supertest": "^7.0.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",

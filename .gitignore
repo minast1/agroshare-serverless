@@ -30,6 +30,8 @@ coverage
 *.tfvars.json
 !example.tfvars
 !*.example.tfvars
+lambda-builds/
+
 
 # Build Outputs
 .next/

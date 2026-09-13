@@ -2,7 +2,8 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 data "aws_ssm_parameter" "ses_arn" {
-  name = "/agroshare/${var.environment}/ses/domain_identity_arn"
+  count = var.environment == "dev" ? 0 : 1
+  name  = "/agroshare/${var.environment}/ses/domain_identity_arn"
 }
 
 # **********************************
@@ -121,7 +122,7 @@ resource "aws_cognito_user_pool" "main" {
     email_sending_account  = var.environment == "dev" ? "COGNITO_DEFAULT" : "DEVELOPER"
     from_email_address     = var.environment == "dev" ? "Agroshare Ghana <no-reply@agroshare.gh>" : "${var.domain}"
     reply_to_email_address = "support@agroshare.gh"
-    source_arn             = var.environment == "dev" ? null : data.aws_ssm_parameter.ses_arn.value
+    source_arn             = var.environment == "dev" ? null : one(data.aws_ssm_parameter.ses_arn[*].value)
   }
 
   #Lambda Configurations 
@@ -334,5 +335,4 @@ module "ssm-parameter-store" {
     }
   ]
 
-  parameter_read = ["value"]
 }

@@ -12,9 +12,9 @@ output "email_service_url" {
   description = "The Email Service URL"
 }
 
-output "email_service_lambda_role_arn" {
-  value       = module.email_service_lambda.role_arn
-  description = "The Email Service Lambda Role ARN"
+output "email_service_queue_url" {
+  value       = module.email_sqs_queue.queue_url
+  description = "The Email Service Queue URL"
 }
 
 output "lambda_function_last_modified" {

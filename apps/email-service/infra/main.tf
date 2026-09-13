@@ -1,3 +1,6 @@
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 # **********************************
 #          EMAIL SQS QUEUE *
 # **********************************
@@ -100,9 +103,11 @@ module "ssm-parameter-store" {
 
   parameter_write = [
     {
-      name      = "/agroshare/${var.NODE_ENV}/ses/domain_identity_arn"
-      type      = "String"
-      value     = module.ses.domain_identity_arn
+      name  = "/agroshare/${var.NODE_ENV}/ses/domain_identity_arn"
+      type  = "String"
+      value = module.ses.domain_identity_arn != "" ? module.ses.domain_identity_arn : "arn:aws:ses:us-east-1:000000000000:identity/local-agroshare-mock"
+
+
       overwrite = "true"
     },
     {

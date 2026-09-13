@@ -29,3 +29,4 @@ builds/
 .tfplan
 plan.out
 .DS_Store
+lambda-builds/

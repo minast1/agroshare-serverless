@@ -1,61 +1,17 @@
-"use client"
 import { Snowflake, Truck, Users, ArrowRight, CheckCircle2, TrendingDown, Activity } from "lucide-react"
-import { useEffect} from "react";
-import { useSearchParams, useRouter } from 'next/navigation';
 import Link from "next/link";
-//import { signIn, signUp, confirmSignUp, signInWithRedirect, fetchAuthSession, confirmSignIn } from 'aws-amplify/auth';
-//import { Amplify } from "aws-amplify";
-//import { Hub } from "aws-amplify/utils";
-
-
-
-// 1. BASE AMPLIFY CONFIGURATION FOR MINISTACK LOCAL TESTING
-// const baseConfig = {
-//   Auth: {
-//     Cognito: {
-//       userPoolEndpoint: 'http://localhost:4566', // Points directly to local Ministack container
-//       userPoolId: process.env.NEXT_PUBLIC_USER_POOL_ID!,
-//       endpoint: 'http://localhost:4566',
-//       loginWith: {
-//        email: true,
-      
-//         oauth: {
-//           //identityProviders: ["Google"],
-//           // This can be a mock domain locally, but must look like a valid endpoint structure
-//           domain: "localhost", 
-//           scheme: 'http', 
-//           scopes: ['openid', 'email', 'profile'],
-//           // MUST match exactly what you whitelisted in your terraform aws_cognito_user_pool_client resource
-//           redirectSignIn: ['http://localhost:3000'], 
-//           redirectSignOut: ['http://localhost:3000'],
-//           responseType: 'code' as const, // Cast to strict literal type for Amplify v6
-//         }
-//       }
-//     }
-//   }
-// };
-
 
 
 export default function Home() {
- 
-   // Navigation & View States
-  // const [activeForm, setActiveForm] = useState<'superadmin' | 'admin'>('admin');
-  // const [adminSubFlow, setAdminSubFlow] = useState<'google' | 'otp_signup' | 'otp_signin'>('google');
-  
-  // // Input fields
-  // const [tenantId, setTenantId] = useState('company-alpha');
-  // const [email, setEmail] = useState('');
-  // const [password, setPassword] = useState('');
- // const [otpCode, setOtpCode] = useState('');
-  
+
+
   // Feedback states
   //const [infoMessage, setInfoMessage] = useState<string | null>(null);
   //const [errorMessage, setErrorMessage] = useState<string | null>(null);
   //const [challengeActive, setChallengeActive] = useState(false);
   //const [sessionData, setSessionData] = useState(null);
-   //console.log(sessionData)
-   // 2. LISTEN FOR OAUTH REDIRECTS (Capturing Google return packets)
+  //console.log(sessionData)
+  // 2. LISTEN FOR OAUTH REDIRECTS (Capturing Google return packets)
   // useEffect(() => {
   //   // Default to initializing standard client profiles on load
   //   configureAmplifyForRole('basic');
@@ -95,11 +51,11 @@ export default function Home() {
   // const handleGoogleSocialAuth = async () => {
   //   clearMessages();
   //   configureAmplifyForRole('basic'); // Pivot singleton to standard Client App ID
-   
+
   //   try {
   //     await signInWithRedirect({
   //       provider: 'Google',
-        
+
   //       customState : JSON.stringify({ tenant_id: tenantId, tenant_type: 'vendor', role: 'admin' }) ,
   //     });
   //   } catch (err: any) {
@@ -181,7 +137,7 @@ export default function Home() {
   // };
 
   return (
-  <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground bg-[url('/app_bg.png')] bg-repeat bg-center">
       <header className="border-b border-border bg-background/80 backdrop-blur sticky top-0 z-20">
         <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-display font-bold text-lg">
@@ -194,8 +150,8 @@ export default function Home() {
             <a href="#how" className="hover:text-foreground">How it Works</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Link href="/auth" className="text-sm px-3 py-2 rounded-md hover:bg-muted">Sign in</Link>
-            <Link href="/onboard" className="text-sm px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90">
+            <Link href="/auth/tenant/login" className="text-sm px-3 py-2 rounded-md hover:bg-muted">Sign in</Link>
+            <Link href="/auth/onboard" className="text-sm px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90">
               Get Started
             </Link>
           </div>
@@ -217,7 +173,7 @@ export default function Home() {
               platform — cutting post-harvest loss and unlocking idle machinery from Tamale to Techiman.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/onboard" className="inline-flex items-center gap-2 px-5 py-3 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90">
+              <Link href="/auth/onboard" className="inline-flex items-center gap-2 px-5 py-3 rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90">
                 Start onboarding <ArrowRight className="w-4 h-4" />
               </Link>
               {/* <Link href="/login" className="inline-flex items-center gap-2 px-5 py-3 rounded-md border border-border bg-card hover:bg-muted font-medium">
@@ -264,7 +220,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="problem" className="border-y border-border bg-card">
+      <section id="problem" className="border-y border-border bg-background">
         <div className="mx-auto max-w-7xl px-6 py-16 grid md:grid-cols-3 gap-8">
           <Problem icon={<TrendingDown className="w-5 h-5" />} title="40% of harvests rot before market" body="Tomato, yam, and pepper losses cost Ghanaian farmers GH₵2B+ annually due to fragmented cold storage." />
           <Problem icon={<Truck className="w-5 h-5" />} title="Tractors idle 6 months a year" body="Mechanization fleets in Tamale and Kumasi are booked privately; cooperatives can't reach them." />
@@ -335,7 +291,7 @@ function Problem({ icon, title, body }: { icon: React.ReactNode; title: string; 
 
 function TenantCard({ color, icon, title, body, features }: { color: string; icon: React.ReactNode; title: string; body: string; features: string[] }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-6 hover:shadow-lg transition-shadow">
+    <div className="rounded-xl border border-border bg-background p-6 hover:shadow-lg transition-shadow">
       <div className={`w-10 h-10 rounded-lg ${color} text-white grid place-items-center mb-4`}>{icon}</div>
       <h3 className="font-semibold text-lg">{title}</h3>
       <p className="mt-2 text-sm text-muted-foreground">{body}</p>
@@ -346,6 +302,6 @@ function TenantCard({ color, icon, title, body, features }: { color: string; ico
       </ul>
     </div>
   );
-  
+
 }
-  
+

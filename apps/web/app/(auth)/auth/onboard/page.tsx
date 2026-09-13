@@ -1,46 +1,40 @@
 "use client";
-import { ArrowLeft, ArrowRight, Building2, CheckCircle2, KeyRound, Loader2, Mail, RefreshCw, ShieldCheck, Snowflake, Sparkles, Truck, Users } from "lucide-react";
-import Footer from "./_components/footer";
-import Row from "./row";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { CheckCircle2, Snowflake, Truck, Users } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import { configureAuthForRole } from "@/app/utils/apmplify-auth";
+import { configureAuthForRole } from "@/app/amplify/auth/resource";
 import { confirmSignUp, resendSignUpCode, signUp } from 'aws-amplify/auth';
 import { TenantType } from "@/types";
 import { generateTenantId } from "@/app/utils/tenant-generators";
 import TenantDetails from "./_components/tenant";
 import OrgDetails from "./_components/org";
 import AccountDetails from "./_components/account";
-import Otp from "./otp";
 import OTP from "./otp";
 import SummaryDetails from "./_components/summary";
 
 type StepId = "type" | "org" | "account" | "verify" | "done";
 
 const STEPS: { id: StepId; label: string; hint: string }[] = [
-   { id: "type",    label: "Tenant",  hint: "Organization type" },
-    { id: "org",     label: "Profile", hint: "Business info" },
+  { id: "type", label: "Tenant", hint: "Organization type" },
+  { id: "org", label: "Profile", hint: "Business info" },
   { id: "account", label: "Account", hint: "Your details" },
-  { id: "verify",  label: "Verify",  hint: "Email OTP" },
-  { id: "done",    label: "Launch",  hint: "Enter workspace" },
+  { id: "verify", label: "Verify", hint: "Email OTP" },
+  { id: "done", label: "Launch", hint: "Enter workspace" },
 ];
 
 const OPTIONS: { id: TenantType; title: string; icon: React.ReactNode; tag: string; desc: string; color: string }[] = [
   { id: "cooperative", title: "Farmer Cooperative or Union", tag: "Type A", desc: "Manage a registry of farmers, place bulk orders, accept USSD requests from members.", icon: <Users className="w-6 h-6" />, color: "bg-primary" },
-  { id: "fleet",       title: "Mechanization Fleet Owner",   tag: "Type B", desc: "Track tractors and harvesters live, accept plowing requests, log fuel and maintenance.", icon: <Truck className="w-6 h-6" />, color: "bg-accent" },
-  { id: "coldchain",   title: "Cold-Chain / Infrastructure", tag: "Type C", desc: "Monitor cold storage capacity, IoT temperature telemetry, and per-crate billing.",       icon: <Snowflake className="w-6 h-6" />, color: "bg-chart-3" },
+  { id: "fleet", title: "Mechanization Fleet Owner", tag: "Type B", desc: "Track tractors and harvesters live, accept plowing requests, log fuel and maintenance.", icon: <Truck className="w-6 h-6" />, color: "bg-accent" },
+  { id: "coldchain", title: "Cold-Chain / Infrastructure", tag: "Type C", desc: "Monitor cold storage capacity, IoT temperature telemetry, and per-crate billing.", icon: <Snowflake className="w-6 h-6" />, color: "bg-chart-3" },
 ];
 
 
 export default function OnboardPage() {
-   const [stepIndex, setStepIndex] = useState(0);
-   const step = STEPS[stepIndex]?.id;
-   const [otpError, setOtpError] = useState<string | null>(null);
-    // Form Fields
+  const [stepIndex, setStepIndex] = useState(0);
+  const step = STEPS[stepIndex]?.id;
+  const [otpError, setOtpError] = useState<string | null>(null);
+
+  // Form Fields
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [type, setType] = useState<TenantType | null>(null);
@@ -48,7 +42,7 @@ export default function OnboardPage() {
   const [phone, setPhone] = useState("");
   // OTP State Machine
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(6).fill(""));
-   const [sending, setSending] = useState(false);
+  const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
@@ -56,42 +50,49 @@ export default function OnboardPage() {
   // Validation States
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const validName = fullName.trim().length >= 2;
-   const validOrg = org.trim().length >= 2;
-  const isFormValid = validEmail && validName && validOrg && type && phone;
- 
-   function generateTemporarySecurePassword() {
+  const validOrg = org.trim().length >= 2;
+  const isFormValid = !!(validEmail && validName && validOrg && type && phone);
+
+  function generateTemporarySecurePassword() {
     return "P@ss1" + Math.random().toString(36).slice(-8) + "!";
   }
+  console.log({ type, email, fullName, org, phone })
 
   useEffect(() => {
-    console.log("Configuring Amplify for admin")
     configureAuthForRole('basic');
   }, []);
 
-   const handleAdminOtpSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
+
+  const handleAdminOtpSignUp = async () => {
+    // e.preventDefault();
+
     if (!isFormValid) return;
     setSending(true);
     setErrorMessage(null);
+
     const tenantId = generateTenantId(org, type);
+
     try {
-      const {nextStep} = await signUp({
+      const { nextStep } = await signUp({
         username: email,
         password: generateTemporarySecurePassword(),
         options: {
-          userAttributes: { 
+          userAttributes: {
             email,
             phone_number: phone,
             name: fullName,
             website: org
           },
           // Passed directly for direct non-redirect API calls
-          clientMetadata: { tenant_id: tenantId, role: 'admin', tenant_type: type! } 
+          clientMetadata: { tenant_id: tenantId, role: 'admin', tenant_type: type! },
+          //autoSignIn: true
         }
       });
-      if(nextStep.signUpStep === 'CONFIRM_SIGN_UP'){
-       setResendIn(30);
-       setStepIndex(1);
+
+      console.log({ nextStep })
+      if (nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
+        setResendIn(30);
+        setStepIndex(3);
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Registration failure.');
@@ -99,21 +100,21 @@ export default function OnboardPage() {
       setSending(false);
     }
   };
-  
+
   const handleVerifyOtp = async () => {
-      const enteredOtp = otpDigits.join("");
-       if (enteredOtp.length !== 6) return;
+    const enteredOtp = otpDigits.join("");
+    if (enteredOtp.length !== 6) return;
     setVerifying(true);
     setOtpError(null);
     setErrorMessage(null);
 
     try {
-     const {nextStep} = await confirmSignUp({
-        username: email, 
+      const { nextStep } = await confirmSignUp({
+        username: email,
         confirmationCode: enteredOtp,
       });
-      if(nextStep.signUpStep === 'DONE'){
-       setStepIndex(2);
+      if (nextStep.signUpStep === 'DONE') {
+        setStepIndex(4);
       }
     } catch (err: any) {
       setOtpError(err.message || 'Registration failure.');
@@ -121,17 +122,17 @@ export default function OnboardPage() {
       setVerifying(false);
     }
   };
-  
+
 
   const handleResendCode = async () => {
     if (resendIn > 0) return;
-     setSending(true);
+    setSending(true);
     setErrorMessage(null);
     setOtpError(null);
-   
+
     try {
       await resendSignUpCode({
-        username: email, 
+        username: email,
       });
       setResendIn(30);
       setOtpDigits(Array(6).fill(""));
@@ -142,15 +143,15 @@ export default function OnboardPage() {
       setSending(false);
     }
   };
- 
+
   useEffect(() => {
-    if (resendIn <= 0) return;
+    if (resendIn <= 0 || stepIndex !== 3) return;
     const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
     return () => clearTimeout(t);
-  }, [resendIn]);
+  }, [resendIn, stepIndex]);
   // OTP
-  
-   //Input Field Helper Methods
+
+  //Input Field Helper Methods
   const handleOtpChange = (i: number, val: string) => {
     const clean = val.replace(/\D/g, "").slice(0, 1);
     const next = [...otpDigits];
@@ -173,17 +174,17 @@ export default function OnboardPage() {
     inputsRef.current[nextFocus]?.focus();
   };
 
-   // Automatically trigger validation when 6 digits are fully filled
+  // Automatically trigger validation when 6 digits are fully filled
   useEffect(() => {
     if (otpDigits.join("").length === 6) {
       handleVerifyOtp();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otpDigits]);
 
   const progressPct = useMemo(() => ((stepIndex + 1) / STEPS.length) * 100, [stepIndex]);
-    return (
-        <div className="min-h-screen bg-linear-to-br from-background via-muted/30 to-background flex flex-col">
+  return (
+    <div className="min-h-screen bg-linear-to-br from-background via-muted/30 to-background flex flex-col">
       {/* Header */}
       <header className="border-b bg-background/70 backdrop-blur sticky top-0 z-10">
         <div className="mx-auto max-w-6xl px-6 h-16 flex items-center justify-between">
@@ -192,7 +193,7 @@ export default function OnboardPage() {
           </Link>
           <div className="text-xs text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/login" className="text-primary font-medium">Sign in</Link>
+            <Link href="/auth/tenant/login" className="text-primary font-medium">Sign in</Link>
           </div>
         </div>
       </header>
@@ -216,7 +217,7 @@ export default function OnboardPage() {
                     <span className={`absolute -left-3 top-1 w-10 h-10 rounded-full grid place-items-center text-xs font-semibold border-2 transition
                       ${done ? "bg-primary border-primary text-primary-foreground"
                         : active ? "bg-background border-primary text-primary"
-                        : "bg-background border-border text-muted-foreground"}`}>
+                          : "bg-background border-border text-muted-foreground"}`}>
                       {done ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
                     </span>
                     <div className="py-2">
@@ -244,18 +245,18 @@ export default function OnboardPage() {
           </div>
 
           <div className="rounded-2xl border bg-card shadow-sm overflow-hidden md:min-w-175">
-             {/* STEP 1: TYPE */}
+            {/* STEP 1: TYPE */}
             {step === "type" && (
-               <TenantDetails  options={OPTIONS} type={type} setType={setType} setStepIndex={setStepIndex} />
+              <TenantDetails options={OPTIONS} type={type} setType={setType} setStepIndex={setStepIndex} />
             )}
-             {/* STEP 2: ORG */}
+            {/* STEP 2: ORG */}
             {step === "org" && (
-               <OrgDetails org={org} setOrg={setOrg} setStepIndex={setStepIndex} phone={phone} setPhone={setPhone} />
+              <OrgDetails org={org} setOrg={setOrg} setStepIndex={setStepIndex} phone={phone} setPhone={setPhone} />
             )}
 
             {/* STEP 3: ACCOUNT */}
             {step === "account" && (
-             <AccountDetails fullName={fullName} setFullName={setFullName} email={email} setEmail={setEmail} validName={validName} validEmail={validEmail} sending={sending} handleAdminOtpSignUp={handleAdminOtpSignUp} setStepIndex={setStepIndex} />
+              <AccountDetails fullName={fullName} setFullName={setFullName} email={email} setEmail={setEmail} validName={validName} validEmail={validEmail} sending={sending} handleAdminOtpSignUp={handleAdminOtpSignUp} setStepIndex={setStepIndex} />
             )}
 
             {/* STEP 2: OTP */}
@@ -278,14 +279,14 @@ export default function OnboardPage() {
 
             {/* STEP 4: DONE */}
             {step === "done" && (
-               <SummaryDetails 
-                 options={OPTIONS} 
-                 setStepIndex={setStepIndex} 
-                 fullName={fullName} 
-                 email={email} 
-                 type={type!} 
-                 org={org} 
-                 phone={phone} />
+              <SummaryDetails
+                options={OPTIONS}
+                setStepIndex={setStepIndex}
+                fullName={fullName}
+                email={email}
+                type={type!}
+                org={org}
+                phone={phone} />
             )}
           </div>
 
@@ -294,12 +295,12 @@ export default function OnboardPage() {
           </p>
         </main>
       </div>
-      
+
       <footer className="border-t border-border mt-auto">
         <div className="mx-auto px-6 py-10 flex items-center justify-center text-sm text-muted-foreground">
           <div>© 2026 AgroShare Ghana. Built in Accra.</div>
         </div>
       </footer>
     </div>
-    );
+  );
 }

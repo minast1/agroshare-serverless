@@ -11,6 +11,7 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@aws-amplify/adapter-nextjs": "^1.7.3",
     "@base-ui/react": "^1.7.0",
     "@tailwindcss/postcss": "^4.3.3",
     "aws-amplify": "^6.20.0",
