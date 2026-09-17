@@ -29,35 +29,37 @@ async function main() {
 
   console.log(`📦 Building Lambda for environment: ${isProduction ? 'PRODUCTION' : 'LOCAL/DEVELOPMENT'}`);
   const pluginsPipeline = [esbuildPluginTsc({
-        force: true,
-      }),]
+    force: true,
+  }),]
 
   const externalLibs = [
-     '@nestjs/microservices',
+    '@nestjs/microservices',
     '@nestjs/websockets',
-    '@aws-sdk/*',
+    '@aws-sdk/client-cognito-identity-provider',
     'class-validator',
     'class-transformer',
-];
-    if(isProduction) {
+    'aws-lambda'
+  ];
+  if (isProduction) {
     externalLibs.push('@sentry/aws-serverless');
+    externalLibs.push('@aws-sdk/client-ses');
 
-      pluginsPipeline.push(
-        sentryEsbuildPlugin({
-      org: "custex",
-      project: "node-awslambda",
-      authToken: process.env.SENTRY_AUTH_TOKEN,
-      release: {
+    pluginsPipeline.push(
+      sentryEsbuildPlugin({
+        org: "custex",
+        project: "node-awslambda",
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        release: {
           name: `payment-service@${Date.now()}`,
           inject: true, // ⚡️ Injects the unique lookup signature tokens into your bundle
         },
-      sourcemaps: {
-        assets: [path.join(distDir, '**/*.map'), path.join(distDir, 'index.js')],
-        filesToDeleteAfterUpload: [
-         path.join(distDir, '**/*.map'),
-        ],
-      },
-    }),)
+        sourcemaps: {
+          assets: [path.join(distDir, '**/*.map'), path.join(distDir, 'index.js')],
+          filesToDeleteAfterUpload: [
+            path.join(distDir, '**/*.map'),
+          ],
+        },
+      }),)
   }
   await esbuild.build({
     entryPoints: [entryPoint],
@@ -65,7 +67,7 @@ async function main() {
     minify: isProduction,
     sourcemap: 'external',
     keepNames: true,
-    treeShaking: true, 
+    treeShaking: true,
     platform: 'node',
     target: 'node20',
     outfile: outputFile,

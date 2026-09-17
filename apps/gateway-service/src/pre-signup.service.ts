@@ -4,7 +4,7 @@ import { PreSignUpTriggerEvent } from 'aws-lambda';
 @Injectable()
 export class PreSignUpService {
   private readonly logger = new Logger(PreSignUpService.name);
-  constructor() {}
+  constructor() { }
 
   handlePreSignUp(event: PreSignUpTriggerEvent) {
     const triggerSource = event.triggerSource as string;
@@ -37,11 +37,11 @@ export class PreSignUpService {
         }
       }
     }
-    if (triggerSource === 'PreSignUp_SignUp') {
-      this.logger.log('Sign Up: ', event);
-      event.response.autoVerifyEmail = true;
-      event.response.autoConfirmUser = true;
-    }
+    // if (triggerSource === 'PreSignUp_SignUp') {
+    //   this.logger.log('Sign Up: ', event);
+    //   event.response.autoConfirmUser = true;
+    //   event.response.autoVerifyEmail = true;
+    // }
 
     return event;
   }

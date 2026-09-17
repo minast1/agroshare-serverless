@@ -1,12 +1,10 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { runBasicAuthServer, runSuperadminServer } from "./app/amplify/auth/server-resource";
-import { fetchAuthSession } from "aws-amplify/auth/server";
-
+import { NextResponse, NextRequest } from "next/server";
+import { getServerAuthSession } from "./app/amplify/auth/server-resource";
 
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
-    const response = NextResponse.next({ request });
+    const response = NextResponse.next();
     const PUBLIC_ROUTES = ["/"]
     if (
         pathname.startsWith('/_next') ||
@@ -19,30 +17,27 @@ export async function middleware(request: NextRequest) {
 
     const pathSegments = pathname.split('/').filter(Boolean); //(["", "dashboard","tenant-type", "tenant-id"])
     const isSuperAdminPath = pathname.startsWith('/superadmin-dashboard');
-    const targetTenantTypeFromUrl = pathSegments[2];
-    const targetTenantIdFromUrl = pathSegments[3];
 
-    const runWithContext = isSuperAdminPath ? runSuperadminServer : runBasicAuthServer;
+    const targetTenantIdFromUrl = pathSegments[1];
+    const authRole = isSuperAdminPath ? 'superadmin' : 'basic';
+
+    const { isAuthenticated, claims } = await getServerAuthSession(authRole, request);
 
     try {
-        const session = await runWithContext({
-            nextServerContext: { request, response },
-            operation: (contextSpec) => fetchAuthSession(contextSpec)
-        })
-        const tokenPayload = session.tokens?.accessToken?.payload
 
-        if (tokenPayload) {
-            const userRole = tokenPayload['role'] as string;
-            const userTenantType = tokenPayload['tenant_type'] as string;
-            const userTenantId = tokenPayload['tenant_id'] as string;
+        if (isAuthenticated) {
+            const userRole = claims!['role'] as string;
+            const userTenantId = claims!['tenant_id'] as string;
 
             if (pathname === '/' || pathname.startsWith('/auth')) {
-                const destination = userRole === 'superadmin' ? '/superadmin-dashboard' : `/dashboard/${userTenantType}/${userTenantId}`;
+                const destination = userRole === 'superadmin' ? '/superadmin-dashboard' : `/dashboard/${userTenantId}`;
                 const redirectRes = NextResponse.redirect(new URL(destination, request.url));
                 redirectRes.headers.set('x-middleware-cache', 'no-cache');
                 return redirectRes;
             }
 
+            //TODO 
+            //Add case for when admin is already logged in and lands on index page 
 
             // CASE A: Accessing Superadmin dashboard
             if (isSuperAdminPath && userRole !== 'superadmin') {
@@ -51,14 +46,10 @@ export async function middleware(request: NextRequest) {
 
             // CASE B: Accessing standard Tenant dashboards (/dashboard/[tenantId])
             if (pathname.startsWith('/dashboard')) {
-                if (targetTenantTypeFromUrl !== userTenantType) {
-                    console.warn(`Tenant Type Mismatch. User tenant type: ${userTenantType}, URL target tenant type: ${targetTenantTypeFromUrl}`);
-                    return NextResponse.redirect(new URL(`/dashboard/${userTenantType}/${userTenantId}`, request.url));
-                }
 
                 if (targetTenantIdFromUrl !== userTenantId) {
                     console.warn(`Tenant ID Mismatch. User tenant ID: ${userTenantId}, URL target tenant ID: ${targetTenantIdFromUrl}`);
-                    return NextResponse.redirect(new URL(`/dashboard/${userTenantType}/${userTenantId}`, request.url));
+                    return NextResponse.redirect(new URL(`/dashboard/${userTenantId}`, request.url));
                 }
                 return response;
             }

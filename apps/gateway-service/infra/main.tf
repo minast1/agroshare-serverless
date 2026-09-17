@@ -56,9 +56,13 @@ module "cognito_auth_lambda" {
       resources = ["*"]
     }
   }
-  role_name = "cognito_unified_auth_lambda_role"
+
+  // use_existing_cloudwatch_log_group = var.environment == "dev" ? true : false
+  cloudwatch_logs_retention_in_days = 1
+
 }
 
+//terraform apply -replace="aws_cognito_user_pool.main" to prevent resource exists error locally
 
 resource "aws_cognito_user_pool" "main" {
   name                     = "agroshare-userpool"
@@ -308,6 +312,7 @@ module "api_gateway" {
     terraform = "true"
 
   }
+
 }
 
 module "ssm-parameter-store" {
