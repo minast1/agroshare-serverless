@@ -14,31 +14,6 @@ const workspaceTypes: { value: TenantType; label: string }[] = [
 
 export default function TenantLoginPage() {
 
-    // const { setTenant } = useTenant();
-
-    //   const enterWorkspace = async () => {
-    //     const { data: userData } = await supabase.auth.getUser();
-    //     const user = userData.user;
-    //     if (!user) return;
-
-    //     const { data: profile } = await supabase
-    //       .from("profiles")
-    //       .select("tenant_type")
-    //       .eq("id", user.id)
-    //       .maybeSingle();
-
-    //     const tenantType = profile?.tenant_type as TenantType | null | undefined;
-    //     if (tenantType && workspaceTypes.some((item) => item.value === tenantType)) {
-    //       setTenant(tenantType);
-    //       navigate({ to: "/app", replace: true });
-    //       return;
-    //     }
-
-    //     navigate({ to: "/onboarding", replace: true });
-    //   };
-
-
-
     return (
         <main className="min-h-screen bg-background lg:grid lg:grid-cols-[minmax(380px,0.9fr)_minmax(520px,1.1fr)]">
             <section className="relative hidden overflow-hidden bg-sidebar px-12 py-10 text-sidebar-foreground lg:flex lg:flex-col">
@@ -73,8 +48,8 @@ export default function TenantLoginPage() {
                     Identity protected by encrypted, passwordless authentication
                 </div>
             </section>
-
-            <section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-16">
+            {/* RIGHT SIDE AUTH SECTION */}
+            <section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-16 bg-[url('/app_bg.png')] bg-repeat bg-center">
                 <div className="flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2 font-display font-bold lg:hidden">
                         <span className="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground"><Leaf className="size-4" /></span>

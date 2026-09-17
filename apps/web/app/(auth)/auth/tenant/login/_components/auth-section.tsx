@@ -4,7 +4,10 @@ import React, { ClipboardEvent, KeyboardEvent, useEffect, useRef, useState } fro
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, Globe2, Loader2, LockKeyhole, Mail, RefreshCw, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import GoogleMark from './google-mark';
+import Image from 'next/image';
+import { confirmSignIn, fetchAuthSession, signIn } from 'aws-amplify/auth';
+import { configureAuthForRole } from '@/app/amplify/auth/resource';
+import { useRouter } from 'next/navigation';
 
 type LoginStage = "email" | "verify";
 
@@ -17,9 +20,13 @@ const AuthSection = () => {
     const [error, setError] = useState("");
     const [resendIn, setResendIn] = useState(0);
     const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
-
+    const router = useRouter();
     const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
+
+    useEffect(() => {
+        configureAuthForRole('basic');
+    }, []);
 
     useEffect(() => {
         if (resendIn <= 0) return;
@@ -31,21 +38,29 @@ const AuthSection = () => {
         if (!validEmail) return;
         setBusy(true);
         setError("");
-        // const { error: sendError } = await supabase.auth.signInWithOtp({
-        //   email: email.trim().toLowerCase(),
-        //   options: { shouldCreateUser: true },
-        // });
-        setBusy(false);
+        try {
+            const { nextStep: signInNextStep } = await signIn({
+                username: email,
+                //password: generateTemporarySecurePassword(),
+                options: {
+                    authFlowType: "CUSTOM_WITHOUT_SRP",
+                },
+            });
 
-        // if (sendError) {
-        //   setError(sendError.message);
-        //   return;
-        // }
 
-        setDigits(Array(6).fill(""));
-        setResendIn(45);
-        setStage("verify");
-        window.setTimeout(() => inputsRef.current[0]?.focus(), 80);
+            if (signInNextStep.signInStep === "CONFIRM_SIGN_IN_WITH_CUSTOM_CHALLENGE") {
+                setBusy(false);
+                setDigits(Array(6).fill(""));
+                setResendIn(45);
+                setStage("verify");
+                window.setTimeout(() => inputsRef.current[0]?.focus(), 80);
+            }
+        } catch (error) {
+            console.log(error);
+            setError("An unexpected error occurred. Please try again.");
+        } finally {
+            setBusy(false);
+        }
     };
 
     const verifyCode = async () => {
@@ -54,21 +69,29 @@ const AuthSection = () => {
         setBusy(true);
         setError("");
 
-        // const { error: verifyError } = await supabase.auth.verifyOtp({
-        //   email: email.trim().toLowerCase(),
-        //   token,
-        //   type: "email",
-        // });
+        try {
+            const { nextStep: confirmSignInNextStep } = await confirmSignIn({
+                challengeResponse: token,
+            });
 
-        //     if (verifyError) {
-        //       setBusy(false);
-        //       setError("That code is invalid or has expired. Request a new code and try again.");
-        //       return;
-        //     }
-
-        //     toast.success("Email verified. Welcome back to AgroShare Ghana.");
-        //     await enterWorkspace();
-        //     setBusy(false);
+            if (confirmSignInNextStep.signInStep === 'DONE') {
+                //toast.success("Email verified. Welcome back to AgroShare Ghana.");
+                const session = await fetchAuthSession();
+                //clear the timer
+                setResendIn(0);
+                const payload = session.tokens?.accessToken?.payload
+                const tenantId = payload?.['tenant_id'] as string;
+                console.log(payload);
+                setBusy(false);
+                router.push(`/dashboard/${tenantId}`)
+                //return;
+            }
+        } catch (error) {
+            console.log(error);
+            setError("An unexpected error occurred. Please try again.");
+        } finally {
+            setBusy(false);
+        }
     };
 
     const signInWithGoogle = async () => {
@@ -125,8 +148,8 @@ const AuthSection = () => {
                             </p>
                         </div>
 
-                        <Button variant="outline" size="lg" className="h-12 w-full" onClick={signInWithGoogle} disabled={busy}>
-                            <GoogleMark />
+                        <Button variant="outline" size="lg" className="h-12 w-full border-2 shadow-md" onClick={signInWithGoogle} disabled={busy}>
+                            <Image src="/google-icon.png" alt="Google" width={22} height={22} />
                             Continue with Google
                         </Button>
 

@@ -4,7 +4,7 @@ import { PreTokenGenerationAuthenticationV2TriggerEvent } from 'aws-lambda';
 @Injectable()
 export class PreTokenGenerationService {
   private readonly logger = new Logger(PreTokenGenerationService.name);
-  constructor() {}
+  constructor() { }
 
   handlePreTokenGeneration(
     event: PreTokenGenerationAuthenticationV2TriggerEvent,
@@ -14,6 +14,9 @@ export class PreTokenGenerationService {
     const tenantId = userAttributes['custom:tenant_id'] || 'unknown';
     const tenantType = userAttributes['custom:tenant_type'] || 'unknown';
     const role = userAttributes['custom:role'] || 'basic';
+    const name = userAttributes['name'] || 'Unknown User';
+    const org = userAttributes['website'] || 'Unknown Org';
+
 
     event.response = {
       claimsAndScopeOverrideDetails: {
@@ -23,6 +26,8 @@ export class PreTokenGenerationService {
             tenant_id: tenantId,
             tenant_type: tenantType,
             role: role,
+            name: name,
+            org: org,
           },
         },
         idTokenGeneration: {
@@ -31,6 +36,8 @@ export class PreTokenGenerationService {
             // tenant_id: tenantId,
             //  tenant_type: tenantType,
             role: role,
+            name: name,
+            org: org,
           },
           claimsToSuppress: [
             'custom:tenant_id',

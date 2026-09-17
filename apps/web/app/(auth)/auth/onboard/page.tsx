@@ -5,7 +5,7 @@ import Link from "next/link";
 import { configureAuthForRole } from "@/app/amplify/auth/resource";
 import { confirmSignUp, resendSignUpCode, signUp } from 'aws-amplify/auth';
 import { TenantType } from "@/types";
-import { generateTenantId } from "@/app/utils/tenant-generators";
+import { generateTemporarySecurePassword, generateTenantId } from "@/app/utils/tenant-generators";
 import TenantDetails from "./_components/tenant";
 import OrgDetails from "./_components/org";
 import AccountDetails from "./_components/account";
@@ -53,16 +53,14 @@ export default function OnboardPage() {
   const validOrg = org.trim().length >= 2;
   const isFormValid = !!(validEmail && validName && validOrg && type && phone);
 
-  function generateTemporarySecurePassword() {
-    return "P@ss1" + Math.random().toString(36).slice(-8) + "!";
-  }
-  console.log({ type, email, fullName, org, phone })
+
+  //console.log({ type, email, fullName, org, phone })
 
   useEffect(() => {
     configureAuthForRole('basic');
   }, []);
 
-
+  const tenantId = generateTenantId(org, type!);
   const handleAdminOtpSignUp = async () => {
     // e.preventDefault();
 
@@ -70,7 +68,6 @@ export default function OnboardPage() {
     setSending(true);
     setErrorMessage(null);
 
-    const tenantId = generateTenantId(org, type);
 
     try {
       const { nextStep } = await signUp({
@@ -81,15 +78,16 @@ export default function OnboardPage() {
             email,
             phone_number: phone,
             name: fullName,
-            website: org
+            website: org,
+            'custom:tenant_id': tenantId,
+            'custom:tenant_type': type,
+            'custom:role': 'admin',
           },
-          // Passed directly for direct non-redirect API calls
-          clientMetadata: { tenant_id: tenantId, role: 'admin', tenant_type: type! },
-          //autoSignIn: true
-        }
+        },
+
+
       });
 
-      console.log({ nextStep })
       if (nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
         setResendIn(30);
         setStepIndex(3);
