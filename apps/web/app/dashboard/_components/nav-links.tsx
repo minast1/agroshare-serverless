@@ -2,6 +2,8 @@
 import React, { useState } from 'react'
 import { NavItem, TenantType } from '@/types';
 import { Users, LayoutDashboard, ShoppingCart, Radio, Network, Banknote, CreditCard, MapPin, ClipboardList, ClipboardSignature, Wrench, Boxes, Thermometer, Receipt, ChevronRight, Snowflake, Truck, LogOut } from 'lucide-react';
+import { signOut } from 'aws-amplify/auth';
+import { redirect } from 'next/navigation';
 
 const TENANT_ICON: Record<TenantType, React.ReactNode> = {
     cooperative: <Users className="w-4 h-4" />,
@@ -78,13 +80,10 @@ const NavLinks = ({ tenantType, tenantLabels, org }: { tenantType: TenantType, t
             <div className="p-3 border-t border-sidebar-border">
 
                 <button
-                    // onClick={async () => {
-                    //   await queryClient.cancelQueries();
-                    //   queryClient.clear();
-                    //   await supabase.auth.signOut();
-                    //   setTenant(null);
-                    //   navigate({ to: "/login", replace: true });
-                    // }}
+                    onClick={async () => {
+                        await signOut();
+                        redirect("/");
+                    }}
                     className="mt-3 w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs text-sidebar-foreground/70 hover:bg-sidebar-accent/50"
                 >
                     <LogOut className="w-3.5 h-3.5" /> Sign out

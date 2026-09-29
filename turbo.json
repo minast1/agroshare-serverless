@@ -3,7 +3,8 @@
   "tasks": {
     "build": {
       "dependsOn": [
-        "^build"
+        "^build",
+        "db:bundle-migrations"
       ],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -54,5 +55,13 @@
       ],
       "cache": false
     },
+    "db:bundle-migrations": {
+      "inputs": [
+        "migrations/**/*.sql"
+      ],
+      "outputs": [
+        "src/migrations-registry.ts"
+      ]
+    }
   }
 }

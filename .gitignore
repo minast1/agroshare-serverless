@@ -18,6 +18,9 @@ coverage
 # Turbo
 .turbo
 
+# Turso local dev
+.turso-local
+
 # Vercel
 .vercel
 

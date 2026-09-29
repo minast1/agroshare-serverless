@@ -15,9 +15,11 @@ module "cognito_auth_lambda" {
   handler       = "index.handler"
   runtime       = "nodejs22.x"
   environment_variables = {
-    AWS_SES_ENDPOINT = var.environment == "dev" ? "http://localhost:4566" : null
-    AWS_REGION       = data.aws_region.current.region
-    RESEND_API_KEY   = var.resend_api_key
+    AWS_SES_ENDPOINT       = var.environment == "dev" ? "http://localhost:4566" : null
+    AWS_REGION             = data.aws_region.current.region
+    RESEND_API_KEY         = var.resend_api_key
+    TURSO_PLATFORM_API_KEY = var.turso_platform_api_key
+    NODE_ENV               = var.environment
   }
   source_path   = "${path.module}/../dist"
   artifacts_dir = "${path.module}/lambda-builds/"

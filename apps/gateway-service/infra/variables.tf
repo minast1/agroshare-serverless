@@ -63,4 +63,8 @@ variable "super_admin_password" {
   description = "The password of the super admin"
 }
 
+variable "turso_platform_api_key" {
+  type      = string
+  sensitive = true
+}
 

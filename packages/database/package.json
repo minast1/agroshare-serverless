@@ -1,0 +1,41 @@
+{
+    "name": "@repo/database",
+    "type": "module",
+    "scripts": {
+        "dev": "tsc --watch",
+        "db:bundle-migrations": "tsx scripts/bundle-migrations.ts",
+        "build": "tsc",
+        "drizzle:generate:cooperative": "drizzle-kit generate --config=drizzle/cooperative.config.ts",
+        "drizzle:generate:fleet": "drizzle-kit generate --config=drizzle/fleet.config.ts",
+        "drizzle:generate:coldchain": "drizzle-kit generate --config=drizzle/coldchain.config.ts",
+        "drizzle:generate:all": "pnpm drizzle:generate:cooperative && pnpm drizzle:generate:fleet && pnpm drizzle:generate:coldchain",
+        "migrate:local": "tsx scripts/migrate-local-groups.ts"
+    },
+    "exports": {
+        "./db": {
+            "types": "./src/db.ts",
+            "default": "./dist/db.js"
+        },
+        "./migrations-registry": {
+            "types": "./src/migrations-registry.ts",
+            "default": "./dist/migrations-registry.js"
+        },
+        "./registry-dynamo": {
+            "types": "./src/registry-dynamo.ts",
+            "default": "./dist/registry-dynamo.js"
+        }
+    },
+    "devDependencies": {
+        "@repo/typescript-config": "workspace:*",
+        "@types/node": "^26.6.3",
+        "drizzle-kit": "1.0.0-rc.4",
+        "tsx": "^4.23.15",
+        "typescript": "5.9.2"
+    },
+    "dependencies": {
+        "@aws-sdk/client-dynamodb": "^3.1142.0",
+        "@aws-sdk/lib-dynamodb": "^3.1142.0",
+        "@tursodatabase/serverless": "^1.4.0",
+        "dynamodb-toolbox": "^2.11.0"
+    }
+}
