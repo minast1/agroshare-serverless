@@ -19,7 +19,7 @@ const documentClient = DynamoDBDocumentClient.from(
     }
 )
 export const RegistryTable = new Table({
-    name: 'AgroShare_Tenant_Registry',
+    name: process.env.REGISTRY_TABLE_NAME || "AgroShare_Tenant_Registry",
     partitionKey: {
         name: 'lookupKey',
         type: 'string',

@@ -30,7 +30,8 @@ export class PostConfirmationService {
     this.logger.log('PostConfirmation Trigger: ', event);
 
     const tenantId = event.request.userAttributes['custom:tenant_id']
-    const tenantType = event.request.userAttributes['custom:tenant_type'];
+    const tenantType = event.request.userAttributes['custom:tenant_type'] as 'cooperative' | 'fleet' | 'coldchain';
+    const phoneNumber = event.request.userAttributes['phone_number'] as string;
 
     this.logger.log(`Starting dynamic db provisioning for tenant: ${tenantId}, of type ${tenantType} `)
 
@@ -38,6 +39,7 @@ export class PostConfirmationService {
       const dbUrl = await this.createCloudDatabase(tenantId);
       this.logger.log(`Database provisioned with URL: ${dbUrl}`);
       await this.applyDynamicCloudMigrations(dbUrl, tenantType);
+      await this.registerTenantRoute(phoneNumber, tenantId, tenantType, dbUrl);
 
     } catch (error) {
       this.logger.error('Error provisioning database:', error);
@@ -124,7 +126,7 @@ export class PostConfirmationService {
 
       this.logger.log(`Successfully registered tenant route for tenant: ${tenantId}`);
     } catch (error) {
-
+      this.logger.error('Failed to write route mapping via DynamoDB-Toolbox:', error);
     }
   }
 }

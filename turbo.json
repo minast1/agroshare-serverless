@@ -56,8 +56,10 @@
       "cache": false
     },
     "db:bundle-migrations": {
+      "cache": false,
       "inputs": [
-        "migrations/**/*.sql"
+        "migrations/**/*.sql",
+        "scripts/bundle-migrations.ts"
       ],
       "outputs": [
         "src/migrations-registry.ts"
