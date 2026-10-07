@@ -6,6 +6,24 @@ data "aws_ssm_parameter" "ses_arn" {
   name  = "/agroshare/${var.environment}/ses/domain_identity_arn"
 }
 
+resource "aws_dynamodb_table" "registry-table" {
+  name         = "AgroShare_Tenant_Registry"
+  billing_mode = "PAY_PER_REQUEST"
+
+  hash_key  = "lookupKey"
+  range_key = "tenantId"
+
+  attribute {
+    name = "lookupKey"
+    type = "S"
+  }
+
+  attribute {
+    name = "tenantId"
+    type = "S"
+  }
+}
+
 # **********************************
 #          COGNITO AUTHENTICATION LAMBDA *
 # **********************************
@@ -18,6 +36,7 @@ module "cognito_auth_lambda" {
     AWS_SES_ENDPOINT       = var.environment == "dev" ? "http://localhost:4566" : null
     AWS_REGION             = data.aws_region.current.region
     RESEND_API_KEY         = var.resend_api_key
+    REGISTRY_TABLE_NAME    = aws_dynamodb_table.registry-table.name
     TURSO_PLATFORM_API_KEY = var.turso_platform_api_key
     NODE_ENV               = var.environment
   }
@@ -45,11 +64,11 @@ module "cognito_auth_lambda" {
       actions   = ["ses:SendRawEmail", "ses:SendEmail", "ses:SendTemplatedEmail", "ses:SendBulkTemplatedEmail"]
       resources = ["*"]
     },
-    # "kms_decrypt" = {
-    #   effect    = "Allow"
-    #   actions   = ["kms:Decrypt", "kms:CreateGrant"]
-    #   resources = ["*"]
-    # },
+    "dynamodb" = {
+      effect    = "Allow"
+      actions   = ["dynamodb:PutItem", "dynamodb:GetItem"]
+      resources = [aws_dynamodb_table.registry-table.arn]
+    },
     "cognito_user_profile_update_policy" = {
       effect = "Allow"
       actions = [
@@ -61,6 +80,7 @@ module "cognito_auth_lambda" {
 
   // use_existing_cloudwatch_log_group = var.environment == "dev" ? true : false
   cloudwatch_logs_retention_in_days = 1
+  depends_on                        = [aws_dynamodb_table.registry-table]
 
 }
 
