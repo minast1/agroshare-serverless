@@ -1,0 +1,103 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "04d36ef2-3102-4993-afa3-9fa93ed01f46",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
+  "ddl": [
+    {
+      "name": "farmers",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "farmers"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "full_name",
+      "entityType": "columns",
+      "table": "farmers"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "phone_number",
+      "entityType": "columns",
+      "table": "farmers"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "location_hub",
+      "entityType": "columns",
+      "table": "farmers"
+    },
+    {
+      "type": "real",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "farm_size_acres",
+      "entityType": "columns",
+      "table": "farmers"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "crop_variety",
+      "entityType": "columns",
+      "table": "farmers"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": "1791329926",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "farmers"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "farmers_pk",
+      "table": "farmers",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "phone_number"
+      ],
+      "nameExplicit": false,
+      "name": "farmers_phone_number_unique",
+      "entityType": "uniques",
+      "table": "farmers"
+    }
+  ],
+  "renames": []
+}
